@@ -2,6 +2,10 @@
 
 AlphaEarth(Google Satellite Embedding V1)의 64차원 임베딩을 **인증 없이** 브라우저에서 자유롭게 RGB 시각화하는 공개 웹 서비스.
 
+![스크린샷: 서울 A01·A16·A09](docs/screenshot.png)
+
+> 상태: **MVP 동작 — 브라우저 라이브 검증 완료(Playwright PASS).** 전 지구 모자이크 타일 + 그레이코드 스크럽 + 타일 캐시.
+
 기존 도구(geoai/leafmap `add_alphaearth_gui`, edgeoinnovations 뷰어)는 모두 Google Earth Engine 인증과 Jupyter 환경을 요구한다. 이 프로젝트는 **공개 COG + 자체 타일 서버**로 그 빗장을 없앤다.
 
 ## 핵심 아이디어

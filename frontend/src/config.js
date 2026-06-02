@@ -4,7 +4,7 @@ export const TITILER_BASE = import.meta.env.VITE_TITILER_BASE ?? "";
 
 export const DEFAULTS = {
   year: 2024,
-  scrub: 0, // 그레이코드 인덱스
+  scrub: 7158, // 그레이코드 인덱스 → [A01,A16,A09] (EE 예시 조합, 컬러풀한 기본값)
   // source.coop COG는 int8(-128..127, nodata=-128). EE의 float ±0.3 ≈ int8 ±38.
   // 경험적으로 ±50이 디테일이 가장 풍부(고유 픽셀값 최다).
   min: -50,

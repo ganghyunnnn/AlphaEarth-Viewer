@@ -27,3 +27,7 @@ Thumbs.db
 *.parquet
 data/
 tiles_cache/
+
+# 런타임 검증 산출물(루트). docs/screenshot.png 은 커밋 유지
+/verification_render.png
+/verification_scrub.png
