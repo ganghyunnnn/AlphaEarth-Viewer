@@ -1,0 +1,21 @@
+# 한 줄 실행:  docker compose up --build
+# 브라우저:    http://localhost:8080
+services:
+  backend:
+    build: ./backend
+    expose:
+      - "8000"
+    volumes:
+      - tiles_cache:/cache
+    environment:
+      - AEF_TILE_CACHE=/cache
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  tiles_cache:

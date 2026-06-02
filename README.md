@@ -39,7 +39,16 @@ frontend/  Vite + MapLibre + 그레이코드 스크럽 바 (바닐라 ESM)
 docs/      설계 문서
 ```
 
-## 개발 시작
+## 실행
+
+### Docker (권장 — 한 줄)
+
+```bash
+docker compose up --build      # → http://localhost:8080
+```
+(nginx가 정적 프론트 서빙 + `/api`를 백엔드로 프록시. 타일 캐시는 named volume에 영속.)
+
+### 로컬 개발
 
 ```bash
 # 백엔드
@@ -47,11 +56,19 @@ cd backend && python -m venv .venv && .venv/Scripts/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# 프론트
-cd frontend && npm install && npm run dev
+# 프론트(별 터미널)
+cd frontend && npm install && npm run dev   # vite가 /api를 8000으로 프록시
 
 # 그레이코드 단위 테스트(의존성 없이 즉시 실행)
 node frontend/test/graycode.test.mjs
 ```
+
+## 검증 현황
+
+- 그레이코드: 전체 262,144 프레임 단위거리/왕복/전단사 테스트 PASS
+- 인덱스 질의: 원격 parquet 실데이터(서울/SF/파리) 검증, 적재 후 ~10ms
+- 타일 렌더: 콜드 ~30–40s(원격 COG), 캐시 HIT ~5–10ms
+- 브라우저: Playwright 헤드리스 PASS(맵 렌더 + 스크럽→재렌더)
+- Docker: 두 이미지 빌드 + compose 스택 서비스 확인
 
 자세한 설계는 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 참고.

@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+tiles_cache/
+tests/
+verify_browser.py
+.pytest_cache/
