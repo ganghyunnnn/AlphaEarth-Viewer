@@ -1,0 +1,18 @@
+{
+  "name": "alphaearth-vis-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/graycode.test.mjs"
+  },
+  "dependencies": {
+    "maplibre-gl": "^4.7.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

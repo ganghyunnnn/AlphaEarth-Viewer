@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AlphaEarth 임베딩 탐색기</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <header id="topbar">
+      <strong>AlphaEarth 임베딩 탐색기</strong>
+      <span class="sub">64밴드 → RGB · 그레이코드 스크럽</span>
+    </header>
+
+    <section id="panel">
+      <div class="row">
+        <label>연도</label>
+        <input id="year" type="range" min="2017" max="2025" step="1" value="2024" />
+        <output id="yearOut">2024</output>
+      </div>
+
+      <div class="row">
+        <label>밴드 조합</label>
+        <input id="scrub" type="range" min="0" max="262143" step="1" value="0" />
+      </div>
+      <div class="row combo">
+        <span class="chip r" id="chipR">R A01</span>
+        <span class="chip g" id="chipG">G A02</span>
+        <span class="chip b" id="chipB">B A03</span>
+        <span class="idx" id="idxOut">#0</span>
+      </div>
+
+      <div class="row">
+        <label>대비(min/max)</label>
+        <input id="rmin" type="range" min="-127" max="0" step="1" value="-50" />
+        <input id="rmax" type="range" min="0" max="127" step="1" value="50" />
+        <output id="rOut">-50 ~ 50</output>
+      </div>
+
+      <div class="row buttons">
+        <button id="play" title="자동 모핑">▶ 재생</button>
+        <button id="skipDeg" class="toggle" title="중복 프레임 건너뛰기">중복 건너뛰기</button>
+        <button id="bookmark" title="현재 조합 고정">📌 북마크</button>
+        <button id="share" title="현재 상태 URL 복사">🔗 공유</button>
+      </div>
+
+      <div id="filmstrip" class="row filmstrip"></div>
+      <div id="bookmarks" class="row bookmarks"></div>
+    </section>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

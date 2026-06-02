@@ -1,0 +1,7 @@
+# FastAPI 앱 + TiTiler 동적 타일 + DuckDB 원격 인덱스 질의
+fastapi>=0.115
+uvicorn[standard]>=0.30
+titiler.core>=0.18
+titiler.mosaic>=0.18
+duckdb>=1.1
+pydantic>=2.7
