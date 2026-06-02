@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import threading
 
 from fastapi import FastAPI, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,6 +76,14 @@ def health() -> dict:
     }
 
 
+# --- single-flight: 동일 타일의 동시 중복 렌더 합치기 -----------------------
+# 스크럽 시 같은 타일이 취소·재요청되며 같은 렌더가 여러 번 시작되면 느린 콜드
+# 렌더가 브라우저 연결(호스트당 6개)을 중복 점유해 일부 타일이 끝까지 안 뜬다.
+# 리더 1개만 렌더하고, 후속 동일 요청은 리더 완료를 기다렸다 캐시에서 공유한다.
+_INFLIGHT: dict = {}
+_INFLIGHT_LOCK = threading.Lock()
+
+
 @app.get("/api/mosaic/tiles/{z}/{x}/{y}.png")
 def mosaic_tile(
     z: int,
@@ -92,7 +101,22 @@ def mosaic_tile(
     if cached is not None:
         return Response(cached, media_type="image/png", headers={"X-Cache": "HIT"})
 
-    # 렌더는 동기(블로킹) — 스레드풀에서 실행되도록 def 라우트 사용
+    # single-flight: 이미 같은 타일을 렌더 중이면 그 완료를 기다린다(리더/팔로워).
+    with _INFLIGHT_LOCK:
+        event = _INFLIGHT.get(key)
+        leader = event is None
+        if leader:
+            event = threading.Event()
+            _INFLIGHT[key] = event
+
+    if not leader:
+        event.wait(timeout=90)
+        shared = TILE_CACHE.get(key)
+        if shared is not None:
+            return Response(shared, media_type="image/png", headers={"X-Cache": "FOLLOW"})
+        return Response(status_code=204, headers={"X-Cache": "EMPTY"})
+
+    # 리더: 실제 렌더(동기 블로킹 — def 라우트라 스레드풀에서 실행)
     from .mosaic import render_tile
 
     try:
@@ -100,12 +124,15 @@ def mosaic_tile(
     except Exception as e:  # noqa: BLE001 — 개별 타일 실패는 빈 타일로 처리
         print(f"render_tile 실패 z{z}/{x}/{y}: {e}")
         png = None
+    finally:
+        if png is not None:
+            TILE_CACHE.put(key, png)
+        with _INFLIGHT_LOCK:
+            _INFLIGHT.pop(key, None)
+        event.set()  # 대기 중인 팔로워 깨우기
 
     if png is None:
-        # 데이터 없는 타일: 204 → MapLibre가 빈 타일로 처리
         return Response(status_code=204, headers={"X-Cache": "EMPTY"})
-
-    TILE_CACHE.put(key, png)
     return Response(png, media_type="image/png", headers={"X-Cache": "MISS"})
 
 

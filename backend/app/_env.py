@@ -41,6 +41,14 @@ _GDAL_HTTP_TUNING = {
     "VSI_CACHE_SIZE": "10000000",  # 10MB/파일
     "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif,.tiff",
     "CPL_VSIL_CURL_CACHE_SIZE": "200000000",  # 200MB 전역 range 캐시
+    # 멈춤 방지(핵심): 타임아웃/재시도가 없으면 원격 연결이 동시 burst에서 멎을 때
+    # 타일 렌더가 무한 대기 → 브라우저 연결을 점유 → "일부 타일이 끝까지 안 뜸".
+    "GDAL_HTTP_TIMEOUT": "30",  # 개별 HTTP 요청 총 타임아웃(초)
+    "GDAL_HTTP_CONNECTTIMEOUT": "10",
+    "GDAL_HTTP_MAX_RETRY": "4",
+    "GDAL_HTTP_RETRY_DELAY": "0.5",
+    "GDAL_HTTP_LOW_SPEED_LIMIT": "1000",  # 1KB/s 미만이
+    "GDAL_HTTP_LOW_SPEED_TIME": "8",  # 8초 지속되면 끊고 재시도(트리클 멈춤 차단)
 }
 
 
