@@ -24,6 +24,10 @@ MIN_YEAR, MAX_YEAR = 2017, 2025
 
 _conn: duckdb.DuckDBPyConnection | None = None
 _lock = threading.Lock()
+# DuckDB 단일 연결은 동시 .execute()에 안전하지 않다(결과셋이 서로 덮여 빈 결과
+# 반환 → cogs=0 → 빈 타일). 질의는 인메모리 테이블이라 ~10ms이므로 직렬화해도
+# 무해(병목은 네트워크 타일 읽기). 모든 질의를 이 락으로 보호한다.
+_query_lock = threading.Lock()
 
 
 def _connection() -> duckdb.DuckDBPyConnection:
@@ -78,7 +82,9 @@ def _query(year: int, west: float, south: float, east: float, north: float) -> t
           AND wgs84_west  < ? AND wgs84_east  > ?
           AND wgs84_south < ? AND wgs84_north > ?
     """
-    rows = _connection().execute(sql, [year, east, west, north, south]).fetchall()
+    conn = _connection()
+    with _query_lock:
+        rows = conn.execute(sql, [year, east, west, north, south]).fetchall()
     return tuple(rows)
 
 
