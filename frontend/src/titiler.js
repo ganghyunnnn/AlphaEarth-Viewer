@@ -17,7 +17,20 @@ export function cogTileUrl(cogUrl, triple, range) {
   return `${TITILER_BASE}/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png?${p.toString()}`;
 }
 
-// 현재 뷰 bbox + year를 덮는 COG 목록 질의
+// 인덱스 기반 동적 모자이크 타일 URL 템플릿(전 지구 단일 소스).
+//   triple = [r,g,b] (0..63), range = {min,max} (int8 스케일)
+export function mosaicTileUrl(year, triple, range) {
+  const [r, g, b] = triple;
+  const p = new URLSearchParams();
+  p.set("year", String(year));
+  p.append("bidx", String(toBidx(r)));
+  p.append("bidx", String(toBidx(g)));
+  p.append("bidx", String(toBidx(b)));
+  p.append("rescale", `${range.min},${range.max}`);
+  return `${API_BASE}/api/mosaic/tiles/{z}/{x}/{y}.png?${p.toString()}`;
+}
+
+// 현재 뷰 bbox + year를 덮는 COG 목록 질의(단일 COG 경로용, 디버그/대안)
 export async function fetchTiles(bbox, year) {
   const [w, s, e, n] = bbox;
   const u = `${API_BASE}/api/tiles?bbox=${w},${s},${e},${n}&year=${year}`;

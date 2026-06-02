@@ -95,8 +95,7 @@ viewer.onMove = ({ lng, lat, zoom }) => {
 
 // --- 초기화 -------------------------------------------------------------
 viewer.whenReady(() => {
-  scrub.init(state.scrub); // triple 확정 + 첫 onChange(commit)
-  viewer.refreshTiles(); // 현재 뷰의 COG 적재
+  scrub.init(state.scrub); // triple 확정 → onChange → viewer.setRender → 모자이크 소스 생성
 });
 
 function flash(btn, text) {

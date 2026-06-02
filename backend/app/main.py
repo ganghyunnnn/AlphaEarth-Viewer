@@ -12,11 +12,19 @@
 from __future__ import annotations
 
 import contextlib
+import os
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from .cache import TileCache
 from .index import MAX_YEAR, MIN_YEAR, Tile, tiles_for_bbox, warmup
+
+# 타일 캐시(메모리 LRU + 디스크). 운영 시 앞단 CDN 권장.
+TILE_CACHE = TileCache(
+    mem_max=2048,
+    disk_dir=os.environ.get("AEF_TILE_CACHE", os.path.join(os.getcwd(), "tiles_cache")),
+)
 
 
 @contextlib.asynccontextmanager
@@ -59,7 +67,46 @@ except Exception:  # titiler.core 미설치
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"ok": True, "titiler": _TITILER, "years": [MIN_YEAR, MAX_YEAR]}
+    return {
+        "ok": True,
+        "titiler": _TITILER,
+        "years": [MIN_YEAR, MAX_YEAR],
+        "cache": TILE_CACHE.stats(),
+    }
+
+
+@app.get("/api/mosaic/tiles/{z}/{x}/{y}.png")
+def mosaic_tile(
+    z: int,
+    x: int,
+    y: int,
+    year: int = Query(2024, ge=MIN_YEAR, le=MAX_YEAR),
+    bidx: list[int] = Query(..., description="R,G,B 밴드(1-indexed) — 3회 반복"),
+    rescale: str = Query("-50,50", description="min,max (int8 스케일)"),
+) -> Response:
+    """인덱스 기반 동적 모자이크 RGB 타일. 캐시 적중 시 즉시 응답."""
+    rmin, rmax = (float(v) for v in rescale.split(","))
+    key = TileCache.key("m", z, x, y, year, tuple(bidx), rmin, rmax)
+
+    cached = TILE_CACHE.get(key)
+    if cached is not None:
+        return Response(cached, media_type="image/png", headers={"X-Cache": "HIT"})
+
+    # 렌더는 동기(블로킹) — 스레드풀에서 실행되도록 def 라우트 사용
+    from .mosaic import render_tile
+
+    try:
+        png = render_tile(z, x, y, year, bidx, (rmin, rmax))
+    except Exception as e:  # noqa: BLE001 — 개별 타일 실패는 빈 타일로 처리
+        print(f"render_tile 실패 z{z}/{x}/{y}: {e}")
+        png = None
+
+    if png is None:
+        # 데이터 없는 타일: 204 → MapLibre가 빈 타일로 처리
+        return Response(status_code=204, headers={"X-Cache": "EMPTY"})
+
+    TILE_CACHE.put(key, png)
+    return Response(png, media_type="image/png", headers={"X-Cache": "MISS"})
 
 
 @app.get("/api/tiles", response_model=list[Tile])
