@@ -95,9 +95,12 @@ body.compare-on .mapbadge { display: block; }
 #scrub { height: 26px; }
 
 .combo { gap: 8px; }
-/* 편집 가능한 밴드 칩: "R A[__]" 형태, 숫자만 입력 */
-.bandchip {
+/* 편집 가능한 밴드 칩: "R A[__]" 형태, 숫자만 입력
+   주의: .bandchip 은 <label> 이라 `.row > label`(muted·width:88px)이 명시도(0,1,1)로
+   먹는다. `.combo .bandchip`(0,2,0)로 색·폭을 확실히 덮어쓴다. */
+.combo .bandchip {
   display: inline-flex; align-items: center; gap: 1px;
+  width: auto; flex: none;
   padding: 3px 8px 3px 10px; border-radius: 999px;
   font-size: 13px; font-weight: 700; color: #0d1117; cursor: text;
 }
