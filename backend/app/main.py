@@ -83,6 +83,15 @@ def health() -> dict:
 _INFLIGHT: dict = {}
 _INFLIGHT_LOCK = threading.Lock()
 
+# 타일 URL은 z/x/y + year + bidx + rescale을 모두 담아 콘텐츠가 URL별 불변이다.
+# → 장기 캐시 안전. 프리페치 fetch()가 이 헤더로 브라우저 캐시를 채우면 이후
+# MapLibre <img> 로드는 네트워크 0(브라우저 캐시 HIT)이 된다. 운영 시 CDN도 활용.
+_CACHE_CONTROL = "public, max-age=86400, immutable"
+
+
+def _tile_headers(x_cache: str) -> dict:
+    return {"X-Cache": x_cache, "Cache-Control": _CACHE_CONTROL}
+
 
 @app.get("/api/mosaic/tiles/{z}/{x}/{y}.png")
 def mosaic_tile(
@@ -99,7 +108,7 @@ def mosaic_tile(
 
     cached = TILE_CACHE.get(key)
     if cached is not None:
-        return Response(cached, media_type="image/png", headers={"X-Cache": "HIT"})
+        return Response(cached, media_type="image/png", headers=_tile_headers("HIT"))
 
     # single-flight: 이미 같은 타일을 렌더 중이면 그 완료를 기다린다(리더/팔로워).
     with _INFLIGHT_LOCK:
@@ -113,7 +122,7 @@ def mosaic_tile(
         event.wait(timeout=90)
         shared = TILE_CACHE.get(key)
         if shared is not None:
-            return Response(shared, media_type="image/png", headers={"X-Cache": "FOLLOW"})
+            return Response(shared, media_type="image/png", headers=_tile_headers("FOLLOW"))
         return Response(status_code=204, headers={"X-Cache": "EMPTY"})
 
     # 리더: 실제 렌더(동기 블로킹 — def 라우트라 스레드풀에서 실행)
@@ -133,7 +142,7 @@ def mosaic_tile(
 
     if png is None:
         return Response(status_code=204, headers={"X-Cache": "EMPTY"})
-    return Response(png, media_type="image/png", headers={"X-Cache": "MISS"})
+    return Response(png, media_type="image/png", headers=_tile_headers("MISS"))
 
 
 @app.get("/api/tiles", response_model=list[Tile])

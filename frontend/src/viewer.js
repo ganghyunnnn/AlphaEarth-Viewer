@@ -9,8 +9,9 @@ import { mosaicTileUrl } from "./titiler.js";
 
 const AEF_SRC = "aef";
 // COG가 10m라 z14~15가 native. 저줌은 타일당 COG 수 폭증 → minzoom으로 차단.
-const AEF_MINZOOM = 7;
-const AEF_MAXZOOM = 15;
+// 프리페처도 동일 줌 범위를 써야 하므로 export.
+export const AEF_MINZOOM = 7;
+export const AEF_MAXZOOM = 15;
 
 export class Viewer {
   constructor(container, initial) {
@@ -33,6 +34,12 @@ export class Viewer {
     this.map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     this.onMove = null;
+    this.onMoveStart = null;
+    this.onIdle = null;
+    this.map.on("movestart", () => this.onMoveStart?.());
+    // idle = 요청한 모든 타일 렌더 완료 + 정적 상태. 프리페치를 이 신호로 구동하면
+    // 보이는 타일 로드가 끝난 뒤에만 실행돼 콜드 로드와 대역폭 경쟁을 하지 않는다.
+    this.map.on("idle", () => this.onIdle?.());
     this.map.on("moveend", () => {
       if (this.onMove) {
         const c = this.map.getCenter();
