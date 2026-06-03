@@ -105,13 +105,17 @@ body.compare-on .mapbadge { display: block; }
 .bandchip.g { background: var(--g); }
 .bandchip.b { background: var(--b); }
 .bandnum {
-  width: 2.6em; margin-left: 2px; padding: 1px 4px;
-  border: none; border-radius: 6px; background: rgba(13, 17, 23, 0.18);
-  color: #0d1117; font: inherit; font-weight: 700; text-align: center;
+  width: 1.9em; padding: 0; border: none; background: transparent;
+  color: inherit; font: inherit; font-weight: 700; text-align: left;
   font-variant-numeric: tabular-nums;
 }
-.bandnum:focus { outline: 2px solid rgba(13, 17, 23, 0.55); background: rgba(255, 255, 255, 0.55); }
-/* 스피너 항상 노출(±로 미세 조정 가능) — Firefox/Chromium 기본값 유지 */
+/* 칩 글자와 동일한 진한 색을 유지하고, 살짝 밑줄로만 '편집 가능' 표시 */
+.bandnum { border-bottom: 1px solid rgba(13, 17, 23, 0.35); }
+.bandnum:focus { outline: none; border-bottom-color: #0d1117; }
+/* 위아래 스피너 버튼 제거 — 타이핑 입력만 */
+.bandnum::-webkit-outer-spin-button,
+.bandnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.bandnum { -moz-appearance: textfield; appearance: textfield; }
 .idx { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .buttons { gap: 8px; flex-wrap: wrap; }
