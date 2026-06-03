@@ -118,7 +118,23 @@ body.compare-on .mapbadge { display: block; }
 .bandnum::-webkit-outer-spin-button,
 .bandnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .bandnum { -moz-appearance: textfield; appearance: textfield; }
-.idx { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* 조합 인덱스(#): muted 색 유지하며 숫자 직접 입력.
+   .idx 도 <label> 이라 `.row > label`(width:88px) 오버라이드 필요 → `.combo .idx`. */
+.combo .idx {
+  margin-left: auto; width: auto; flex: none;
+  display: inline-flex; align-items: baseline; cursor: text;
+  color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px;
+}
+.idxnum {
+  width: 4.6em; padding: 0; border: none; background: transparent;
+  color: var(--muted); -webkit-text-fill-color: var(--muted); opacity: 1;
+  font: inherit; text-align: left; font-variant-numeric: tabular-nums;
+}
+.idxnum:focus { outline: none; color: var(--fg); -webkit-text-fill-color: var(--fg); }
+.idxnum::-webkit-outer-spin-button,
+.idxnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.idxnum { -moz-appearance: textfield; appearance: textfield; }
+.idx .dup { color: var(--muted); }
 
 .buttons { gap: 8px; flex-wrap: wrap; }
 .buttons button {

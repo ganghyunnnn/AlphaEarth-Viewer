@@ -5,7 +5,7 @@ const FILMSTRIP_N = 9; // 필름스트립 미리보기 개수
 
 export class ScrubControl {
   constructor(els, { onChange, makePreviewUrl }) {
-    this.els = els; // {scrub, bandR,bandG,bandB, idxOut, play, skipDeg, bookmark, filmstrip, bookmarks}
+    this.els = els; // {scrub, bandR,bandG,bandB, idxIn, idxDup, play, skipDeg, bookmark, filmstrip, bookmarks}
     this.onChange = onChange; // (index, triple, {commit}) => void
     this.makePreviewUrl = makePreviewUrl; // (triple) => string|null  (필름스트립 썸네일)
     this.skipDegenerate = false;
@@ -29,6 +29,12 @@ export class ScrubControl {
     for (const inp of [e.bandR, e.bandG, e.bandB]) {
       inp.addEventListener("change", () => this._onBandInput());
     }
+
+    // 조합 인덱스(#) 직접 입력 → 해당 그레이코드 인덱스로 점프(범위 밖은 래핑).
+    e.idxIn.addEventListener("change", () => {
+      if (e.idxIn.value === "" || Number.isNaN(Number(e.idxIn.value))) return;
+      this.set(Number(e.idxIn.value), true);
+    });
 
     // 키보드 좌우 화살표로 한 프레임씩(중복 건너뛰기 반영)
     window.addEventListener("keydown", (ev) => {
@@ -109,7 +115,8 @@ export class ScrubControl {
     this.els.bandR.value = r;
     this.els.bandG.value = g;
     this.els.bandB.value = b;
-    this.els.idxOut.textContent = `#${this.index}` + (isDegenerate(this.triple) ? " (중복)" : "");
+    this.els.idxIn.value = this.index;
+    this.els.idxDup.textContent = isDegenerate(this.triple) ? " (중복)" : "";
   }
 
   _renderFilmstrip() {
