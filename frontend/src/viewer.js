@@ -1,17 +1,14 @@
-// MapLibre 지도 + AlphaEarth 단일 모자이크 레이어.
+// MapLibre 지도 + AlphaEarth 단일 모자이크 레이어(맵 A).
 // 백엔드 /api/mosaic/tiles 가 타일마다 인덱스로 교차 COG를 찾아 병합하므로,
 // 프론트는 단 하나의 raster 소스만 관리한다(전 지구 줌). 밴드/연도/대비 변경 시
 // 타일 URL만 교체(setTiles)하면 되고, 뷰 이동 시 별도 재질의가 필요 없다.
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { BASEMAP_TILES } from "./config.js";
-import { mosaicTileUrl } from "./titiler.js";
+import { applyAef, baseStyle, AEF_MINZOOM, AEF_MAXZOOM } from "./aeflayer.js";
 
-const AEF_SRC = "aef";
-// COG가 10m라 z14~15가 native. 저줌은 타일당 COG 수 폭증 → minzoom으로 차단.
-// 프리페처도 동일 줌 범위를 써야 하므로 export.
-export const AEF_MINZOOM = 7;
-export const AEF_MAXZOOM = 15;
+// 프리페처가 동일 줌 범위를 써야 하므로 재노출(기존 import 경로 호환).
+export { AEF_MINZOOM, AEF_MAXZOOM };
 
 export class Viewer {
   constructor(container, initial) {
@@ -21,13 +18,7 @@ export class Viewer {
 
     this.map = new maplibregl.Map({
       container,
-      style: {
-        version: 8,
-        sources: {
-          base: { type: "raster", tiles: BASEMAP_TILES, tileSize: 256, attribution: "© CARTO" },
-        },
-        layers: [{ id: "base", type: "raster", source: "base" }],
-      },
+      style: baseStyle(BASEMAP_TILES),
       center: [initial.lng, initial.lat],
       zoom: initial.zoom,
     });
@@ -54,22 +45,7 @@ export class Viewer {
   }
 
   _apply() {
-    if (!this.triple) return;
-    const url = mosaicTileUrl(this.year, this.triple, this.range);
-    const src = this.map.getSource(AEF_SRC);
-    if (src) {
-      src.setTiles([url]); // 밴드/연도/대비 변경 — URL만 교체
-      return;
-    }
-    this.map.addSource(AEF_SRC, {
-      type: "raster",
-      tiles: [url],
-      tileSize: 256,
-      minzoom: AEF_MINZOOM,
-      maxzoom: AEF_MAXZOOM,
-      attribution: "AlphaEarth / Source Cooperative (tge-labs/aef)",
-    });
-    this.map.addLayer({ id: AEF_SRC, type: "raster", source: AEF_SRC });
+    applyAef(this.map, { year: this.year, triple: this.triple, range: this.range });
   }
 
   setYear(year) {

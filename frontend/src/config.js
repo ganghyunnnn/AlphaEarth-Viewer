@@ -13,6 +13,13 @@ export const DEFAULTS = {
   lng: 126.98,
   lat: 37.56,
   zoom: 10,
+  // 비교(스와이프) 모드 상태 — 기본값과 다를 때만 URL에 직렬화된다.
+  compare: 0, // 0/1
+  swipe: 0.5, // 분할 경계 위치(0..1)
+  bYear: 2024, // 분할면 B: 연도
+  bScrub: 7158, // 분할면 B: 밴드조합(그레이코드 인덱스)
+  bMin: -50, // 분할면 B: 대비 min
+  bMax: 50, // 분할면 B: 대비 max
 };
 
 export const YEAR_RANGE = [2017, 2025];

@@ -55,6 +55,15 @@ export class ScrubControl {
     this.onChange(this.index, this.triple, { commit });
   }
 
+  // 화면(슬라이더·칩·필름스트립)만 갱신하고 onChange는 호출하지 않는다.
+  // 편집 대상(A/B) 전환 시 이미 렌더된 측의 값을 컨트롤에 되불러올 때 사용.
+  show(index) {
+    this.index = ((Math.round(index) % TOTAL) + TOTAL) % TOTAL;
+    this.els.scrub.value = String(this.index);
+    this._renderChips();
+    this._renderFilmstrip();
+  }
+
   togglePlay() {
     this.playing = !this.playing;
     this.els.play.textContent = this.playing ? "⏸ 정지" : "▶ 재생";

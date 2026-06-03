@@ -9,7 +9,7 @@
 // fetch, 동시성·총량 제한, 세션 중복 제거.
 import { step, indexToTriple, toBidx } from "./graycode.js";
 import { API_BASE } from "./config.js";
-import { AEF_MINZOOM, AEF_MAXZOOM } from "./viewer.js";
+import { AEF_MINZOOM, AEF_MAXZOOM } from "./aeflayer.js";
 
 function lngLatToTile(lng, lat, z) {
   const n = 2 ** z;

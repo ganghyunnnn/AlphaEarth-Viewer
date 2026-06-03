@@ -1,7 +1,10 @@
 // URL permalink: 전체 뷰어 상태를 쿼리스트링으로 직렬화/복원.
 import { DEFAULTS } from "./config.js";
 
-const KEYS = ["year", "scrub", "min", "max", "lng", "lat", "zoom"];
+const KEYS = [
+  "year", "scrub", "min", "max", "lng", "lat", "zoom",
+  "compare", "swipe", "bYear", "bScrub", "bMin", "bMax",
+];
 
 export function readState() {
   const p = new URLSearchParams(location.search);
@@ -19,7 +22,9 @@ export function readState() {
 export function toQuery(s) {
   const p = new URLSearchParams();
   for (const k of KEYS) {
-    const v = k === "lng" || k === "lat" ? round(s[k], 5) : s[k];
+    let v = s[k];
+    if (k === "lng" || k === "lat") v = round(v, 5);
+    else if (k === "swipe") v = round(v, 3);
     if (v !== DEFAULTS[k]) p.set(k, String(v));
   }
   return p.toString();

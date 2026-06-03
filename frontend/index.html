@@ -8,6 +8,15 @@
   </head>
   <body>
     <div id="map"></div>
+    <!-- 비교 모드 전용: 맵 A 위에 겹쳐지는 두 번째 맵(우측 노출, clip-path로 분할) -->
+    <div id="mapB"></div>
+
+    <!-- 분할 경계 + 드래그 핸들 (비교 모드에서만 표시) -->
+    <div id="divider"><div class="grip">⇆</div></div>
+
+    <!-- 각 분할면 식별 배지 (비교 모드에서만 표시) -->
+    <div id="badgeA" class="mapbadge a">A</div>
+    <div id="badgeB" class="mapbadge b">B</div>
 
     <header id="topbar">
       <strong>AlphaEarth 임베딩 탐색기</strong>
@@ -15,39 +24,52 @@
     </header>
 
     <section id="panel">
-      <div class="row">
-        <label>연도</label>
-        <input id="year" type="range" min="2017" max="2025" step="1" value="2024" />
-        <output id="yearOut">2024</output>
+      <div class="panel-head">
+        <span class="title">컨트롤</span>
+        <!-- 편집 대상 선택(비교 모드에서만 표시) -->
+        <div id="sideTabs" class="side-tabs" hidden>
+          <button id="tabA" class="side-tab a on" data-side="A">A</button>
+          <button id="tabB" class="side-tab b" data-side="B">B</button>
+        </div>
+        <button id="collapse" class="collapse" title="패널 접기/펼치기" aria-expanded="true">▾</button>
       </div>
 
-      <div class="row">
-        <label>밴드 조합</label>
-        <input id="scrub" type="range" min="0" max="262143" step="1" value="0" />
-      </div>
-      <div class="row combo">
-        <span class="chip r" id="chipR">R A01</span>
-        <span class="chip g" id="chipG">G A02</span>
-        <span class="chip b" id="chipB">B A03</span>
-        <span class="idx" id="idxOut">#0</span>
-      </div>
+      <div class="panel-body">
+        <div class="row">
+          <label>연도</label>
+          <input id="year" type="range" min="2017" max="2025" step="1" value="2024" />
+          <output id="yearOut">2024</output>
+        </div>
 
-      <div class="row">
-        <label>대비(min/max)</label>
-        <input id="rmin" type="range" min="-127" max="0" step="1" value="-50" />
-        <input id="rmax" type="range" min="0" max="127" step="1" value="50" />
-        <output id="rOut">-50 ~ 50</output>
-      </div>
+        <div class="row">
+          <label>밴드 조합</label>
+          <input id="scrub" type="range" min="0" max="262143" step="1" value="0" />
+        </div>
+        <div class="row combo">
+          <span class="chip r" id="chipR">R A01</span>
+          <span class="chip g" id="chipG">G A02</span>
+          <span class="chip b" id="chipB">B A03</span>
+          <span class="idx" id="idxOut">#0</span>
+        </div>
 
-      <div class="row buttons">
-        <button id="play" title="자동 모핑">▶ 재생</button>
-        <button id="skipDeg" class="toggle" title="중복 프레임 건너뛰기">중복 건너뛰기</button>
-        <button id="bookmark" title="현재 조합 고정">📌 북마크</button>
-        <button id="share" title="현재 상태 URL 복사">🔗 공유</button>
-      </div>
+        <div class="row">
+          <label>대비(min/max)</label>
+          <input id="rmin" type="range" min="-127" max="0" step="1" value="-50" />
+          <input id="rmax" type="range" min="0" max="127" step="1" value="50" />
+          <output id="rOut">-50 ~ 50</output>
+        </div>
 
-      <div id="filmstrip" class="row filmstrip"></div>
-      <div id="bookmarks" class="row bookmarks"></div>
+        <div class="row buttons">
+          <button id="play" title="자동 모핑">▶ 재생</button>
+          <button id="skipDeg" class="toggle" title="중복 프레임 건너뛰기">중복 건너뛰기</button>
+          <button id="compare" class="toggle" title="좌우 분할 비교">⇆ 비교 모드</button>
+          <button id="bookmark" title="현재 조합 고정">📌 북마크</button>
+          <button id="share" title="현재 상태 URL 복사">🔗 공유</button>
+        </div>
+
+        <div id="filmstrip" class="row filmstrip"></div>
+        <div id="bookmarks" class="row bookmarks"></div>
+      </div>
     </section>
 
     <script type="module" src="./src/main.js"></script>

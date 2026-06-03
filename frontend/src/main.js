@@ -1,19 +1,38 @@
 import { Viewer } from "./viewer.js";
 import { ScrubControl } from "./scrubbar.js";
 import { Prefetcher } from "./prefetch.js";
+import { CompareController } from "./compare.js";
 import { readState, pushState, shareUrl } from "./state.js";
-import { TOTAL } from "./graycode.js";
+import { TOTAL, indexToTriple } from "./graycode.js";
 
 const $ = (id) => document.getElementById(id);
 
 const state = readState();
 
-// --- 지도 뷰어 ----------------------------------------------------------
+// --- 지도 뷰어(맵 A) ----------------------------------------------------
 const viewer = new Viewer("map", state);
 
-// --- 유휴 예측 프리페치 -------------------------------------------------
-// 사용자가 멈춘 동안 스크럽 ±1 이웃 프레임(타일당 1밴드만 콜드)과 팬 마진을 미리
-// 당겨와 캐시를 데운다. 상호작용 시작 시 즉시 취소해 실 요청에 대역폭을 양보.
+// --- 비교 모드(스와이프) 컨트롤러 --------------------------------------
+const compare = new CompareController({
+  mapA: viewer.map,
+  containerB: $("mapB"),
+  divider: $("divider"),
+});
+
+// --- 분할면 A/B 파라미터 -----------------------------------------------
+// A는 최상위 state(year/scrub/min/max)를 그대로 사용(permalink 호환).
+// B는 state.b* 필드로 프록시한다. 두 측 모두 {year,scrub,min,max} 인터페이스.
+const B = {
+  get year() { return state.bYear; }, set year(v) { state.bYear = v; },
+  get scrub() { return state.bScrub; }, set scrub(v) { state.bScrub = v; },
+  get min() { return state.bMin; }, set min(v) { state.bMin = v; },
+  get max() { return state.bMax; }, set max(v) { state.bMax = v; },
+};
+const sideParams = { A: state, B };
+let activeSide = "A"; // 패널이 편집하는 분할면
+let bSeeded = !!state.compare; // permalink로 B 값이 들어왔으면 A 복제 생략
+
+// --- 유휴 예측 프리페치(맵 A 기준) -------------------------------------
 const prefetcher = new Prefetcher(viewer.map);
 function pfCtx() {
   return {
@@ -28,21 +47,22 @@ function pfSettle() {
   prefetcher.schedule();
 }
 
-// --- 스크럽 바 ----------------------------------------------------------
+// --- 활성 분할면 렌더(드래그=프리뷰 디바운스, 손 뗌=즉시 풀해상도) ------
 let renderTimer = null;
-function debouncedRender(triple, commit) {
-  if (commit) {
-    clearTimeout(renderTimer);
-    viewer.setRender(triple, { min: state.min, max: state.max });
-    return;
-  }
+function renderActive(commit) {
+  const p = sideParams[activeSide];
+  const triple = indexToTriple(p.scrub);
+  const range = { min: p.min, max: p.max };
+  const doIt = () => {
+    if (activeSide === "A") viewer.setRender(triple, range);
+    else compare.setRenderB({ year: p.year, triple, range });
+  };
   clearTimeout(renderTimer);
-  renderTimer = setTimeout(
-    () => viewer.setRender(triple, { min: state.min, max: state.max }),
-    150,
-  );
+  if (commit) doIt();
+  else renderTimer = setTimeout(doIt, 150);
 }
 
+// --- 스크럽 바 ----------------------------------------------------------
 const scrub = new ScrubControl(
   {
     scrub: $("scrub"),
@@ -57,10 +77,10 @@ const scrub = new ScrubControl(
     bookmarks: $("bookmarks"),
   },
   {
-    onChange: (index, triple, { commit }) => {
-      state.scrub = index;
-      prefetcher.cancel(); // 스크럽 중엔 프리페치 중단(대역폭 양보) — idle 후 재개
-      debouncedRender(triple, commit);
+    onChange: (index, _triple, { commit }) => {
+      sideParams[activeSide].scrub = index;
+      if (activeSide === "A") prefetcher.cancel(); // 스크럽 중 프리페치 중단(대역폭 양보)
+      renderActive(commit);
       if (commit) pushState(state);
     },
     makePreviewUrl: () => null, // TODO: TiTiler /cog/preview 기반 썸네일
@@ -71,20 +91,26 @@ const scrub = new ScrubControl(
 $("year").value = String(state.year);
 $("yearOut").textContent = String(state.year);
 $("year").addEventListener("input", () => {
-  state.year = Number($("year").value);
-  $("yearOut").textContent = String(state.year);
-  prefetcher.cancel(); // 연도 변경 중단 — idle 후 재개
-  viewer.setYear(state.year);
+  const p = sideParams[activeSide];
+  p.year = Number($("year").value);
+  $("yearOut").textContent = String(p.year);
+  if (activeSide === "A") {
+    prefetcher.cancel();
+    viewer.setYear(p.year);
+  } else {
+    compare.setRenderB({ year: p.year, triple: indexToTriple(p.scrub), range: { min: p.min, max: p.max } });
+  }
   pushState(state);
 });
 
 // --- 대비(min/max) ------------------------------------------------------
 function syncRange(commit) {
-  state.min = Number($("rmin").value);
-  state.max = Number($("rmax").value);
-  $("rOut").textContent = `${state.min} ~ ${state.max}`;
-  prefetcher.cancel(); // 대비 조정 중엔 프리페치 중단 — idle 후 재개
-  viewer.setRender(scrub.triple, { min: state.min, max: state.max });
+  const p = sideParams[activeSide];
+  p.min = Number($("rmin").value);
+  p.max = Number($("rmax").value);
+  $("rOut").textContent = `${p.min} ~ ${p.max}`;
+  if (activeSide === "A") prefetcher.cancel(); // 대비 조정 중 프리페치 중단
+  renderActive(true); // 대비는 즉시 반영(라이브)
   if (commit) pushState(state);
 }
 $("rmin").value = String(state.min);
@@ -93,7 +119,60 @@ $("rmin").addEventListener("input", () => syncRange(false));
 $("rmax").addEventListener("input", () => syncRange(false));
 $("rmin").addEventListener("change", () => syncRange(true));
 $("rmax").addEventListener("change", () => syncRange(true));
-$("rOut").textContent = `${state.min.toFixed(2)} ~ ${state.max.toFixed(2)}`;
+$("rOut").textContent = `${state.min} ~ ${state.max}`;
+
+// --- 편집 대상(A/B) 전환 ------------------------------------------------
+// 선택한 측의 저장값을 컨트롤에 되불러온다(렌더는 이미 돼 있으므로 silent).
+function setActiveSide(side) {
+  activeSide = side;
+  $("tabA").classList.toggle("on", side === "A");
+  $("tabB").classList.toggle("on", side === "B");
+  const p = sideParams[side];
+  $("year").value = String(p.year);
+  $("yearOut").textContent = String(p.year);
+  $("rmin").value = String(p.min);
+  $("rmax").value = String(p.max);
+  $("rOut").textContent = `${p.min} ~ ${p.max}`;
+  scrub.show(p.scrub);
+}
+$("tabA").addEventListener("click", () => setActiveSide("A"));
+$("tabB").addEventListener("click", () => setActiveSide("B"));
+
+// --- 비교 모드 토글 -----------------------------------------------------
+function setCompare(on) {
+  state.compare = on ? 1 : 0;
+  document.body.classList.toggle("compare-on", on);
+  $("compare").classList.toggle("on", on);
+  $("sideTabs").hidden = !on;
+  if (on) {
+    // 켜는 순간 B를 현재 A로 복제(같은 화면에서 시작 → 한쪽만 바꿔 비교).
+    // 단, permalink로 B 값이 복원된 경우엔 유지.
+    if (!bSeeded) {
+      B.year = state.year;
+      B.scrub = state.scrub;
+      B.min = state.min;
+      B.max = state.max;
+      bSeeded = true;
+    }
+    compare.enable({ year: B.year, triple: indexToTriple(B.scrub), range: { min: B.min, max: B.max } });
+    compare.setSwipe(state.swipe);
+  } else {
+    compare.disable();
+    setActiveSide("A"); // 단일 뷰 → A 편집으로 복귀
+  }
+  pushState(state);
+}
+$("compare").addEventListener("click", () => setCompare(state.compare ? false : true));
+compare.onSwipeEnd = (t) => {
+  state.swipe = t;
+  pushState(state);
+};
+
+// --- 패널 접기/펼치기 ---------------------------------------------------
+$("collapse").addEventListener("click", () => {
+  const collapsed = $("panel").classList.toggle("collapsed");
+  $("collapse").setAttribute("aria-expanded", String(!collapsed));
+});
 
 // --- 공유 버튼 ----------------------------------------------------------
 $("share").addEventListener("click", async () => {
@@ -121,6 +200,7 @@ viewer.onIdle = () => pfSettle();
 // --- 초기화 -------------------------------------------------------------
 viewer.whenReady(() => {
   scrub.init(state.scrub); // triple 확정 → onChange → viewer.setRender → 모자이크 소스 생성
+  if (state.compare) setCompare(true); // permalink 복원
 });
 
 function flash(btn, text) {
