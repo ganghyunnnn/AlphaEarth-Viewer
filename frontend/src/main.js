@@ -66,9 +66,9 @@ function renderActive(commit) {
 const scrub = new ScrubControl(
   {
     scrub: $("scrub"),
-    chipR: $("chipR"),
-    chipG: $("chipG"),
-    chipB: $("chipB"),
+    bandR: $("bandR"),
+    bandG: $("bandG"),
+    bandB: $("bandB"),
     idxOut: $("idxOut"),
     play: $("play"),
     skipDeg: $("skipDeg"),

@@ -95,10 +95,23 @@ body.compare-on .mapbadge { display: block; }
 #scrub { height: 26px; }
 
 .combo { gap: 8px; }
-.chip { padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #0d1117; }
-.chip.r { background: var(--r); }
-.chip.g { background: var(--g); }
-.chip.b { background: var(--b); }
+/* 편집 가능한 밴드 칩: "R A[__]" 형태, 숫자만 입력 */
+.bandchip {
+  display: inline-flex; align-items: center; gap: 1px;
+  padding: 3px 8px 3px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; color: #0d1117; cursor: text;
+}
+.bandchip.r { background: var(--r); }
+.bandchip.g { background: var(--g); }
+.bandchip.b { background: var(--b); }
+.bandnum {
+  width: 2.6em; margin-left: 2px; padding: 1px 4px;
+  border: none; border-radius: 6px; background: rgba(13, 17, 23, 0.18);
+  color: #0d1117; font: inherit; font-weight: 700; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.bandnum:focus { outline: 2px solid rgba(13, 17, 23, 0.55); background: rgba(255, 255, 255, 0.55); }
+/* 스피너 항상 노출(±로 미세 조정 가능) — Firefox/Chromium 기본값 유지 */
 .idx { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .buttons { gap: 8px; flex-wrap: wrap; }

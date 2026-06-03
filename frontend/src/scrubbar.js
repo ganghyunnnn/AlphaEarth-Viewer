@@ -5,7 +5,7 @@ const FILMSTRIP_N = 9; // 필름스트립 미리보기 개수
 
 export class ScrubControl {
   constructor(els, { onChange, makePreviewUrl }) {
-    this.els = els; // {scrub, chipR,chipG,chipB, idxOut, play, skipDeg, bookmark, filmstrip, bookmarks}
+    this.els = els; // {scrub, bandR,bandG,bandB, idxOut, play, skipDeg, bookmark, filmstrip, bookmarks}
     this.onChange = onChange; // (index, triple, {commit}) => void
     this.makePreviewUrl = makePreviewUrl; // (triple) => string|null  (필름스트립 썸네일)
     this.skipDegenerate = false;
@@ -23,6 +23,12 @@ export class ScrubControl {
       e.skipDeg.classList.toggle("on", this.skipDegenerate);
     });
     e.bookmark.addEventListener("click", () => this.addBookmark());
+
+    // R/G/B 밴드 번호 직접 입력 → triple→그레이코드 인덱스 역산 후 점프(commit).
+    // change(Enter/blur/스피너)에서만 반영해 여러 자리 입력 중 튀지 않게 한다.
+    for (const inp of [e.bandR, e.bandG, e.bandB]) {
+      inp.addEventListener("change", () => this._onBandInput());
+    }
 
     // 키보드 좌우 화살표로 한 프레임씩(중복 건너뛰기 반영)
     window.addEventListener("keydown", (ev) => {
@@ -82,11 +88,27 @@ export class ScrubControl {
     this._renderBookmarks();
   }
 
+  // 밴드 입력값 → 정수 0..63로 보정(빈 값/비정수는 null = 입력 중으로 간주).
+  _readBand(el) {
+    const v = Number(el.value);
+    if (el.value === "" || Number.isNaN(v)) return null;
+    return Math.min(63, Math.max(0, Math.round(v)));
+  }
+
+  _onBandInput() {
+    const r = this._readBand(this.els.bandR);
+    const g = this._readBand(this.els.bandG);
+    const b = this._readBand(this.els.bandB);
+    if (r === null || g === null || b === null) return;
+    this.set(tripleToIndex([r, g, b]), true);
+  }
+
   _renderChips() {
     const [r, g, b] = this.triple;
-    this.els.chipR.textContent = `R ${bandName(r)}`;
-    this.els.chipG.textContent = `G ${bandName(g)}`;
-    this.els.chipB.textContent = `B ${bandName(b)}`;
+    // 프로그램적 .value 설정은 input/change 이벤트를 발생시키지 않아 피드백 루프 없음.
+    this.els.bandR.value = r;
+    this.els.bandG.value = g;
+    this.els.bandB.value = b;
     this.els.idxOut.textContent = `#${this.index}` + (isDegenerate(this.triple) ? " (중복)" : "");
   }
 
