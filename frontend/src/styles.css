@@ -106,7 +106,8 @@ body.compare-on .mapbadge { display: block; }
 .bandchip.b { background: var(--b); }
 .bandnum {
   width: 1.9em; padding: 0; border: none; background: transparent;
-  color: #0d1117; font: inherit; font-weight: 700; text-align: left;
+  color: #0d1117; -webkit-text-fill-color: #0d1117; opacity: 1;
+  font: inherit; font-weight: 700; text-align: left;
   font-variant-numeric: tabular-nums;
 }
 .bandnum:focus { outline: none; }
