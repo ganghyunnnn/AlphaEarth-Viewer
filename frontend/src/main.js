@@ -232,6 +232,7 @@ viewer.onIdle = () => pfSettle();
 viewer.whenReady(() => {
   scrub.init(state.scrub); // triple 확정 → onChange → viewer.setRender → 모자이크 소스 생성
   setBasemap(currentBasemap); // 저장된 베이스맵 복원(다크 외일 때 base 타일 교체)
+  setOpacity(currentOpacity, false); // 저장된 투명도 적용(레이어 생성 후)
   if (state.compare) setCompare(true); // permalink 복원
 });
 
@@ -279,6 +280,27 @@ function setBasemap(key) {
 document
   .querySelectorAll("#basemapTabs .seg-btn")
   .forEach((b) => b.addEventListener("click", () => setBasemap(b.dataset.bm)));
+
+// --- AlphaEarth 레이어 투명도 — 전역 뷰 설정, 맵 A·B 동시 적용 ----------
+let currentOpacity = parseFloat(localStorage.getItem("aef_opacity"));
+if (Number.isNaN(currentOpacity)) currentOpacity = 1;
+function setOpacity(v, commit) {
+  currentOpacity = v;
+  viewer.setOpacity(v);
+  compare.setOpacity(v);
+  $("opacityOut").textContent = Math.round(v * 100) + "%";
+  if (commit) {
+    try {
+      localStorage.setItem("aef_opacity", String(v));
+    } catch {
+      /* private mode 등 — 무시 */
+    }
+  }
+}
+$("opacity").value = String(currentOpacity);
+$("opacityOut").textContent = Math.round(currentOpacity * 100) + "%";
+$("opacity").addEventListener("input", () => setOpacity(Number($("opacity").value), false));
+$("opacity").addEventListener("change", () => setOpacity(Number($("opacity").value), true));
 
 function flash(btn, text) {
   const old = btn.textContent;

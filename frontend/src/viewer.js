@@ -46,6 +46,10 @@ export class Viewer {
 
   _apply() {
     applyAef(this.map, { year: this.year, triple: this.triple, range: this.range });
+    // 레이어 재적용(setTiles)은 paint 속성을 유지하지만, 최초 생성 직후엔 명시 적용 필요.
+    if (this._opacity != null && this.map.getLayer("aef")) {
+      this.map.setPaintProperty("aef", "raster-opacity", this._opacity);
+    }
   }
 
   setYear(year) {
@@ -65,5 +69,13 @@ export class Viewer {
     const apply = () => this.map.getSource("base")?.setTiles(tiles);
     if (this.map.loaded()) apply();
     else this.map.once("load", apply);
+  }
+
+  // AlphaEarth 레이어 투명도(0..1) — base 위 raster-opacity.
+  setOpacity(v) {
+    this._opacity = v;
+    if (this.map.getLayer && this.map.getLayer("aef")) {
+      this.map.setPaintProperty("aef", "raster-opacity", v);
+    }
   }
 }

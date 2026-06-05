@@ -22,6 +22,7 @@ export class CompareController {
     this._syncing = false;
     this._renderB = null; // {year, triple, range}
     this._basemapTiles = null; // 현재 베이스맵 타일(맵 B 생성/전환에 사용)
+    this._opacity = null; // 현재 AEF 레이어 투명도(맵 B 생성 후 적용)
     this.onSwipeEnd = null; // (swipe) => void — 드래그 종료 시(상태 저장용)
 
     this._onDown = this._onDown.bind(this);
@@ -93,8 +94,22 @@ export class CompareController {
   setRenderB(render) {
     this._renderB = render;
     if (!this.mapB) return;
-    if (this.mapB.loaded()) applyAef(this.mapB, render);
-    else this.mapB.once("load", () => applyAef(this.mapB, render));
+    const run = () => {
+      applyAef(this.mapB, render);
+      if (this._opacity != null && this.mapB.getLayer("aef")) {
+        this.mapB.setPaintProperty("aef", "raster-opacity", this._opacity);
+      }
+    };
+    if (this.mapB.loaded()) run();
+    else this.mapB.once("load", run);
+  }
+
+  // AEF 레이어 투명도(0..1) — 맵 B에 적용(아직 없으면 다음 렌더 시 반영).
+  setOpacity(v) {
+    this._opacity = v;
+    if (this.mapB && this.mapB.getLayer && this.mapB.getLayer("aef")) {
+      this.mapB.setPaintProperty("aef", "raster-opacity", v);
+    }
   }
 
   // 베이스맵 전환 → 맵 B의 base 소스 타일 교체(아직 없으면 다음 생성 시 반영).

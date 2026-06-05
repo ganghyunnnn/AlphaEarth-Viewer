@@ -32,6 +32,7 @@ Every pixel has 64 bands (A00–A63); pick any 3 to map to R/G/B. Instead of thr
 - **Compare (swipe) mode** — split the map and drag the divider to compare two combos/years side by side.
 - **Place & coordinate search** — type a place name (OpenStreetMap / Nominatim) or `lat, lng` to fly there; collapses to a 🔍 icon.
 - **Basemap switch** — Dark / Satellite (Esri) / OSM, applied to both compare panes.
+- **Embedding opacity** — fade the AlphaEarth layer to blend it with the basemap underneath.
 - **Keyboard-editable contrast** — type the min/max rescale values directly, in sync with the sliders.
 - **Language toggle** — English / 한국어 (English is the default).
 - **Permalink** — view state is serialized into the URL for sharing.

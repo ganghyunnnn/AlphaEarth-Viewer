@@ -53,15 +53,16 @@ body.compare-on .mapbadge { display: block; }
 }
 #topbar .sub { color: var(--muted); font-size: 12px; }
 
-/* 지명/좌표 검색 (화살표 토글로 접기 — 펼침 ❮ / 접힘 ❯) */
-.searchbox { position: relative; display: flex; align-items: center; gap: 4px; }
+/* 지명/좌표 검색 (상하 화살표 토글 — 접힘 ▾ / 펼침 ▴) */
+.searchbox { position: relative; display: inline-flex; align-items: center; }
 .searchbox.collapsed .search { display: none; }
-/* 화살표 토글: 패널 접기(▾)와 동일하게 상태에 따라 회전 */
-.search-arrow { font-size: 15px; font-weight: 700; line-height: 1; padding: 5px 9px; transition: transform .15s; }
-.searchbox.collapsed .search-arrow { transform: rotate(180deg); }
-.search { position: relative; display: flex; align-items: center; gap: 4px; }
+/* 화살표 토글: 접힘 ▾(아래로 펼침) → 펼치면 180° 회전해 ▴(위로 접기) */
+.search-arrow { font-size: 13px; font-weight: 700; line-height: 1; padding: 5px 9px; transition: transform .15s; }
+.searchbox:not(.collapsed) .search-arrow { transform: rotate(180deg); }
+/* 입력창은 토글 아래로 펼쳐지는 드롭다운(absolute) → 상단바 박스 크기 불변 */
+.search { position: absolute; top: calc(100% + 8px); right: 0; z-index: 10; }
 .search input {
-  width: 220px; max-width: 48vw;
+  width: 240px; max-width: 70vw;
   background: #0d1117; color: var(--fg);
   border: 1px solid #30363d; border-radius: 8px;
   padding: 6px 10px; font-size: 13px; outline: none;
@@ -115,10 +116,16 @@ body.compare-on .mapbadge { display: block; }
 .rnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .rnum { -moz-appearance: textfield; appearance: textfield; }
 
-/* 베이스맵 세그먼트 컨트롤(다크/위성/OSM) */
-.seg { display: flex; gap: 4px; flex: 1; }
+/* 베이스맵(레이어) 선택 — 우측 플로팅 세로 컨트롤 */
+.basemap-ctl {
+  position: absolute; right: 12px; top: 54px; z-index: 6;
+  display: flex; flex-direction: column; gap: 4px;
+  background: var(--panel); padding: 8px; border-radius: 10px;
+  backdrop-filter: blur(6px); box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
+.basemap-cap { font-size: 11px; color: var(--muted); padding: 0 2px 2px; text-align: center; }
 .seg-btn {
-  flex: 1; background: #21262d; color: var(--fg);
+  width: 96px; background: #21262d; color: var(--fg);
   border: 1px solid #30363d; border-radius: 8px;
   padding: 6px 8px; cursor: pointer; font-size: 12px; line-height: 1;
 }
