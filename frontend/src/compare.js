@@ -21,6 +21,7 @@ export class CompareController {
     this.swipe = 0.5; // 0..1, 경계의 가로 위치
     this._syncing = false;
     this._renderB = null; // {year, triple, range}
+    this._basemapTiles = null; // 현재 베이스맵 타일(맵 B 생성/전환에 사용)
     this.onSwipeEnd = null; // (swipe) => void — 드래그 종료 시(상태 저장용)
 
     this._onDown = this._onDown.bind(this);
@@ -36,7 +37,7 @@ export class CompareController {
     const c = this.mapA.getCenter();
     this.mapB = new maplibregl.Map({
       container: this.containerB,
-      style: baseStyle(BASEMAP_TILES),
+      style: baseStyle(this._basemapTiles || BASEMAP_TILES),
       center: [c.lng, c.lat],
       zoom: this.mapA.getZoom(),
       bearing: this.mapA.getBearing(),
@@ -94,6 +95,15 @@ export class CompareController {
     if (!this.mapB) return;
     if (this.mapB.loaded()) applyAef(this.mapB, render);
     else this.mapB.once("load", () => applyAef(this.mapB, render));
+  }
+
+  // 베이스맵 전환 → 맵 B의 base 소스 타일 교체(아직 없으면 다음 생성 시 반영).
+  setBasemapTiles(tiles) {
+    this._basemapTiles = tiles;
+    if (!this.mapB) return;
+    const apply = () => this.mapB.getSource("base")?.setTiles(tiles);
+    if (this.mapB.loaded()) apply();
+    else this.mapB.once("load", apply);
   }
 
   // 경계 위치(0..1) 설정 → B를 왼쪽에서 swipe만큼 잘라 오른쪽만 노출.

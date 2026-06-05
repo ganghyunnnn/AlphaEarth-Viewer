@@ -21,13 +21,15 @@
     <header id="topbar">
       <strong data-i18n="appTitle">AlphaEarth Embedding Explorer</strong>
       <span class="sub" data-i18n="appSub">64 bands → RGB · gray-code scrub</span>
-      <!-- 지명/좌표 검색 -->
-      <form id="searchForm" class="search" autocomplete="off">
-        <input id="searchInput" type="text" data-i18n-ph="searchPlaceholder"
-               placeholder="Search place or lat, lng" />
-        <button type="submit" class="search-btn" data-i18n-title="searchTitle" title="Search">🔍</button>
-        <div id="searchResults" class="search-results" hidden></div>
-      </form>
+      <!-- 지명/좌표 검색(접기 가능: 🔍 토글로 입력창 펼침) -->
+      <div id="searchBox" class="searchbox collapsed">
+        <button type="button" id="searchToggle" class="search-btn" data-i18n-title="searchTitle" title="Search">🔍</button>
+        <form id="searchForm" class="search" autocomplete="off">
+          <input id="searchInput" type="text" data-i18n-ph="searchPlaceholder"
+                 placeholder="Search place or lat, lng" />
+          <div id="searchResults" class="search-results" hidden></div>
+        </form>
+      </div>
     </header>
 
     <!-- 언어 토글(EN ↔ 한국어) -->
@@ -66,7 +68,20 @@
           <label data-i18n="contrast">Contrast (min/max)</label>
           <input id="rmin" type="range" min="-127" max="0" step="1" value="-50" />
           <input id="rmax" type="range" min="0" max="127" step="1" value="50" />
-          <output id="rOut">-50 ~ 50</output>
+          <span class="rangeout">
+            <input id="rminNum" class="rnum" type="number" min="-127" max="0" step="1" />
+            <span class="tilde">~</span>
+            <input id="rmaxNum" class="rnum" type="number" min="0" max="127" step="1" />
+          </span>
+        </div>
+
+        <div class="row">
+          <label data-i18n="basemap">Basemap</label>
+          <div id="basemapTabs" class="seg">
+            <button type="button" class="seg-btn" data-bm="dark" data-i18n="bmDark">Dark</button>
+            <button type="button" class="seg-btn" data-bm="satellite" data-i18n="bmSatellite">Satellite</button>
+            <button type="button" class="seg-btn" data-bm="osm">OSM</button>
+          </div>
         </div>
 
         <div class="row buttons">

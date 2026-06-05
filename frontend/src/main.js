@@ -6,6 +6,7 @@ import { SearchControl } from "./search.js";
 import { readState, pushState, shareUrl } from "./state.js";
 import { TOTAL, indexToTriple } from "./graycode.js";
 import { applyI18n, setLang, getLang, onLangChange, t } from "./i18n.js";
+import { BASEMAPS } from "./config.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -106,23 +107,52 @@ $("year").addEventListener("input", () => {
   pushState(state);
 });
 
-// --- 대비(min/max) ------------------------------------------------------
-function syncRange(commit) {
-  const p = sideParams[activeSide];
-  p.min = Number($("rmin").value);
-  p.max = Number($("rmax").value);
-  $("rOut").textContent = `${p.min} ~ ${p.max}`;
+// --- 대비(min/max): 슬라이더 + 키보드 숫자 입력(양방향 동기화) -----------
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+// 현재 측 값으로 슬라이더·숫자입력 4개를 모두 맞춘다.
+function setRangeUI(p) {
+  $("rmin").value = String(p.min);
+  $("rmax").value = String(p.max);
+  $("rminNum").value = String(p.min);
+  $("rmaxNum").value = String(p.max);
+}
+
+function commitRange(commit) {
   if (activeSide === "A") prefetcher.cancel(); // 대비 조정 중 프리페치 중단
   renderActive(true); // 대비는 즉시 반영(라이브)
   if (commit) pushState(state);
 }
-$("rmin").value = String(state.min);
-$("rmax").value = String(state.max);
-$("rmin").addEventListener("input", () => syncRange(false));
-$("rmax").addEventListener("input", () => syncRange(false));
-$("rmin").addEventListener("change", () => syncRange(true));
-$("rmax").addEventListener("change", () => syncRange(true));
-$("rOut").textContent = `${state.min} ~ ${state.max}`;
+
+// 슬라이더 드래그 → 값(드래그=프리뷰, 손 뗌=커밋).
+function onRangeSlider(commit) {
+  const p = sideParams[activeSide];
+  p.min = Number($("rmin").value);
+  p.max = Number($("rmax").value);
+  $("rminNum").value = String(p.min);
+  $("rmaxNum").value = String(p.max);
+  commitRange(commit);
+}
+
+// 숫자 직접 입력 → 슬라이더 도메인으로 클램프 후 반영. change(Enter/blur)에서만.
+function onRangeNum() {
+  const p = sideParams[activeSide];
+  const mn = Number($("rminNum").value);
+  const mx = Number($("rmaxNum").value);
+  if (Number.isNaN(mn) || Number.isNaN(mx)) return;
+  p.min = clamp(Math.round(mn), -127, 0);
+  p.max = clamp(Math.round(mx), 0, 127);
+  setRangeUI(p);
+  commitRange(true);
+}
+
+setRangeUI(state);
+$("rmin").addEventListener("input", () => onRangeSlider(false));
+$("rmax").addEventListener("input", () => onRangeSlider(false));
+$("rmin").addEventListener("change", () => onRangeSlider(true));
+$("rmax").addEventListener("change", () => onRangeSlider(true));
+$("rminNum").addEventListener("change", onRangeNum);
+$("rmaxNum").addEventListener("change", onRangeNum);
 
 // --- 편집 대상(A/B) 전환 ------------------------------------------------
 // 선택한 측의 저장값을 컨트롤에 되불러온다(렌더는 이미 돼 있으므로 silent).
@@ -133,9 +163,7 @@ function setActiveSide(side) {
   const p = sideParams[side];
   $("year").value = String(p.year);
   $("yearOut").textContent = String(p.year);
-  $("rmin").value = String(p.min);
-  $("rmax").value = String(p.max);
-  $("rOut").textContent = `${p.min} ~ ${p.max}`;
+  setRangeUI(p);
   scrub.show(p.scrub);
 }
 $("tabA").addEventListener("click", () => setActiveSide("A"));
@@ -203,6 +231,7 @@ viewer.onIdle = () => pfSettle();
 // --- 초기화 -------------------------------------------------------------
 viewer.whenReady(() => {
   scrub.init(state.scrub); // triple 확정 → onChange → viewer.setRender → 모자이크 소스 생성
+  setBasemap(currentBasemap); // 저장된 베이스맵 복원(다크 외일 때 base 타일 교체)
   if (state.compare) setCompare(true); // permalink 복원
 });
 
@@ -217,13 +246,39 @@ syncLangUI();
 onLangChange(syncLangUI);
 $("langToggle").addEventListener("click", () => setLang(getLang() === "en" ? "ko" : "en"));
 
-// --- 지명/좌표 검색 -----------------------------------------------------
+// --- 지명/좌표 검색 + 접기 토글 ----------------------------------------
 new SearchControl({
   form: $("searchForm"),
   input: $("searchInput"),
   results: $("searchResults"),
   map: viewer.map,
 });
+$("searchToggle").addEventListener("click", () => {
+  const collapsed = $("searchBox").classList.toggle("collapsed");
+  if (!collapsed) $("searchInput").focus();
+});
+
+// --- 베이스맵 전환(다크/위성/OSM) — 전역 뷰 설정, 맵 A·B 동시 적용 -------
+let currentBasemap = localStorage.getItem("aef_basemap") || "dark";
+if (!BASEMAPS[currentBasemap]) currentBasemap = "dark";
+function setBasemap(key) {
+  if (!BASEMAPS[key]) return;
+  currentBasemap = key;
+  try {
+    localStorage.setItem("aef_basemap", key);
+  } catch {
+    /* private mode 등 — 무시 */
+  }
+  const tiles = BASEMAPS[key].tiles;
+  viewer.setBasemapTiles(tiles);
+  compare.setBasemapTiles(tiles);
+  document
+    .querySelectorAll("#basemapTabs .seg-btn")
+    .forEach((b) => b.classList.toggle("on", b.dataset.bm === key));
+}
+document
+  .querySelectorAll("#basemapTabs .seg-btn")
+  .forEach((b) => b.addEventListener("click", () => setBasemap(b.dataset.bm)));
 
 function flash(btn, text) {
   const old = btn.textContent;

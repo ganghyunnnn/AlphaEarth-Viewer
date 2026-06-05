@@ -59,4 +59,11 @@ export class Viewer {
     this.range = range;
     this._apply();
   }
+
+  // 베이스맵 전환 → base 소스 타일 URL 교체(AEF 레이어는 그대로 위에 유지).
+  setBasemapTiles(tiles) {
+    const apply = () => this.map.getSource("base")?.setTiles(tiles);
+    if (this.map.loaded()) apply();
+    else this.map.once("load", apply);
+  }
 }

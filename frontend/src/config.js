@@ -25,6 +25,21 @@ export const DEFAULTS = {
 export const YEAR_RANGE = [2017, 2025];
 
 // 베이스맵: 키 불필요한 공개 래스터 타일(데모용). 운영 시 교체 권장.
-export const BASEMAP_TILES = [
-  "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-];
+// 런타임에 base 소스의 setTiles로 전환한다(Esri는 {z}/{y}/{x} 순서).
+export const BASEMAPS = {
+  dark: {
+    tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
+    attribution: "© CARTO",
+  },
+  satellite: {
+    tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+    attribution: "© Esri, Maxar, Earthstar Geographics",
+  },
+  osm: {
+    tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+    attribution: "© OpenStreetMap contributors",
+  },
+};
+
+// 초기 베이스맵(맵 A/B 최초 스타일). 런타임 전환은 main.js의 setBasemap.
+export const BASEMAP_TILES = BASEMAPS.dark.tiles;
