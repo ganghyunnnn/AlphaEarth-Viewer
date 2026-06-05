@@ -6,7 +6,7 @@ const STORE = "aef_lang";
 
 const DICT = {
   en: {
-    appTitle: "AlphaEarth Embedding Explorer",
+    appTitle: "AlphaEarth Viewer",
     appSub: "64 bands → RGB · gray-code scrub",
     searchPlaceholder: "Search place or lat, lng",
     searchTitle: "Search",
@@ -37,7 +37,7 @@ const DICT = {
     dup: " (dup)",
   },
   ko: {
-    appTitle: "AlphaEarth 임베딩 탐색기",
+    appTitle: "AlphaEarth 뷰어",
     appSub: "64밴드 → RGB · 그레이코드 스크럽",
     searchPlaceholder: "지명 또는 위도, 경도 검색",
     searchTitle: "검색",

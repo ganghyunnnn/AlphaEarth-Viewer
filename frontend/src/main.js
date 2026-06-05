@@ -336,4 +336,4 @@ function flash(btn, text) {
   setTimeout(() => (btn.textContent = old), 1200);
 }
 
-console.log(`AlphaEarth 탐색기 준비. 총 조합 ${TOTAL.toLocaleString()}개.`);
+console.log(`AlphaEarth Viewer 준비. 총 조합 ${TOTAL.toLocaleString()}개.`);

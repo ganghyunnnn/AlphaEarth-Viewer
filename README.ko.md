@@ -1,4 +1,4 @@
-# alphaearth-vis
+# AlphaEarth Viewer
 
 [English](README.md) | 한국어
 
