@@ -9,7 +9,7 @@
 // 디바이더 핸들만 최상단에서 자체 드래그 핸들러로 경계를 옮긴다.
 import maplibregl from "maplibre-gl";
 import { BASEMAP_TILES } from "./config.js";
-import { applyAef, baseStyle, setBasemap as setMapBasemap } from "./aeflayer.js";
+import { applyAef, baseStyle, setBasemap as setMapBasemap, whenStyleReady } from "./aeflayer.js";
 
 export class CompareController {
   constructor({ mapA, containerB, divider }) {
@@ -104,8 +104,7 @@ export class CompareController {
         }
       }
     };
-    if (this.mapB.loaded()) run();
-    else this.mapB.once("load", run);
+    whenStyleReady(this.mapB, run);
   }
 
   // AEF 레이어 투명도(0..1) — 맵 B에 적용(아직 없으면 다음 렌더 시 반영).

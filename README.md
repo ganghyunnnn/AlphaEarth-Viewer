@@ -31,7 +31,7 @@ Every pixel has 64 bands (A00–A63); pick any 3 to map to R/G/B. Instead of thr
 - **Single gray-code scrub** across all 262,144 band combinations; type R/G/B band numbers or the combo index directly.
 - **Compare (swipe) mode** — split the map and drag the divider to compare two combos/years side by side.
 - **Place & coordinate search** — type a place name (OpenStreetMap / Nominatim) or `lat, lng` to fly there; collapses to a 🔍 icon.
-- **Basemap switch** — Dark / Satellite (Esri) / OSM, applied to both compare panes.
+- **Basemap switch** — Satellite (Esri, default) / Dark / OSM, applied identically to both compare panes.
 - **Embedding opacity & on/off** — fade the AlphaEarth layer over the basemap, or toggle it off entirely to see just the basemap.
 - **Keyboard-editable contrast** — type the min/max rescale values directly, in sync with the sliders.
 - **Language toggle** — English / 한국어 (English is the default).

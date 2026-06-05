@@ -41,5 +41,6 @@ export const BASEMAPS = {
   },
 };
 
-// 초기 베이스맵(맵 A/B 최초 스타일). 런타임 전환은 main.js의 setBasemap.
-export const BASEMAP_TILES = BASEMAPS.dark.tiles;
+// 기본 베이스맵 키(localStorage 미저장 시) + 맵 A/B 최초 스타일 타일.
+export const DEFAULT_BASEMAP = "satellite";
+export const BASEMAP_TILES = BASEMAPS[DEFAULT_BASEMAP].tiles;

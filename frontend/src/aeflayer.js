@@ -18,6 +18,23 @@ export function baseStyle(basemapTiles) {
   };
 }
 
+// 스타일이 소스/레이어 조작 가능한 상태가 되면 fn 실행.
+// 주의: once("load")는 최초 1회뿐이라, 로드 후 호출 시 콜백이 영영 안 불린다.
+// isStyleLoaded()도 소스 로딩 중 false가 될 수 있으므로 styledata로 준비될 때까지 폴링.
+export function whenStyleReady(map, fn) {
+  // styledata 이벤트는 로딩 중(isStyleLoaded=false)에만 발생하고 최종 준비 순간엔
+  // 다시 안 뜨는 경우가 있어 콜백을 놓친다. 짧은 타이머 폴링으로 확실히 잡는다.
+  if (map.isStyleLoaded()) {
+    fn();
+    return;
+  }
+  const id = setInterval(() => {
+    if (!map.isStyleLoaded()) return;
+    clearInterval(id);
+    fn();
+  }, 50);
+}
+
 // 베이스맵 전환: base 소스/레이어를 재생성해 확실히 새 타일을 로드한다.
 // (RasterTileSource.setTiles는 브라우저에 따라 이미 로드된 타일을 즉시 새로고침하지
 //  않아 A/B가 서로 다른 베이스맵으로 보일 수 있다. 맵 A·B가 같은 헬퍼를 쓰므로 항상 일치.)
@@ -32,8 +49,7 @@ export function setBasemap(map, tiles, attribution = "") {
       map.getLayer("aef") ? "aef" : undefined,
     );
   };
-  if (map.loaded()) run();
-  else map.once("load", run);
+  whenStyleReady(map, run);
 }
 
 // 맵에 AEF 소스/레이어를 적용(없으면 생성, 있으면 타일 URL만 교체).

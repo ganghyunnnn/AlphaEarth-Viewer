@@ -6,7 +6,7 @@ import { SearchControl } from "./search.js";
 import { readState, pushState, shareUrl } from "./state.js";
 import { TOTAL, indexToTriple } from "./graycode.js";
 import { applyI18n, setLang, getLang, onLangChange, t } from "./i18n.js";
-import { BASEMAPS } from "./config.js";
+import { BASEMAPS, DEFAULT_BASEMAP } from "./config.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -266,7 +266,7 @@ $("searchToggle").addEventListener("click", () => {
 });
 
 // --- 베이스맵 전환(다크/위성/OSM) — 전역 뷰 설정, 맵 A·B 동시 적용 -------
-let currentBasemap = localStorage.getItem("aef_basemap") || "dark";
+let currentBasemap = localStorage.getItem("aef_basemap") || DEFAULT_BASEMAP;
 if (!BASEMAPS[currentBasemap]) currentBasemap = "dark";
 function setBasemap(key) {
   if (!BASEMAPS[key]) return;
