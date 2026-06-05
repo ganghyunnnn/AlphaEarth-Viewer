@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AlphaEarth 임베딩 탐색기</title>
+    <title>AlphaEarth Embedding Explorer</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
@@ -19,30 +19,40 @@
     <div id="badgeB" class="mapbadge b">B</div>
 
     <header id="topbar">
-      <strong>AlphaEarth 임베딩 탐색기</strong>
-      <span class="sub">64밴드 → RGB · 그레이코드 스크럽</span>
+      <strong data-i18n="appTitle">AlphaEarth Embedding Explorer</strong>
+      <span class="sub" data-i18n="appSub">64 bands → RGB · gray-code scrub</span>
+      <!-- 지명/좌표 검색 -->
+      <form id="searchForm" class="search" autocomplete="off">
+        <input id="searchInput" type="text" data-i18n-ph="searchPlaceholder"
+               placeholder="Search place or lat, lng" />
+        <button type="submit" class="search-btn" data-i18n-title="searchTitle" title="Search">🔍</button>
+        <div id="searchResults" class="search-results" hidden></div>
+      </form>
     </header>
+
+    <!-- 언어 토글(EN ↔ 한국어) -->
+    <button id="langToggle" class="lang-toggle" title="Language">한국어</button>
 
     <section id="panel">
       <div class="panel-head">
-        <span class="title">컨트롤</span>
+        <span class="title" data-i18n="panelTitle">Controls</span>
         <!-- 편집 대상 선택(비교 모드에서만 표시) -->
         <div id="sideTabs" class="side-tabs" hidden>
           <button id="tabA" class="side-tab a on" data-side="A">A</button>
           <button id="tabB" class="side-tab b" data-side="B">B</button>
         </div>
-        <button id="collapse" class="collapse" title="패널 접기/펼치기" aria-expanded="true">▾</button>
+        <button id="collapse" class="collapse" data-i18n-title="collapseTitle" title="Collapse / expand panel" aria-expanded="true">▾</button>
       </div>
 
       <div class="panel-body">
         <div class="row">
-          <label>연도</label>
+          <label data-i18n="year">Year</label>
           <input id="year" type="range" min="2017" max="2025" step="1" value="2024" />
           <output id="yearOut">2024</output>
         </div>
 
         <div class="row">
-          <label>밴드 조합</label>
+          <label data-i18n="bandCombo">Band combo</label>
           <input id="scrub" type="range" min="0" max="262143" step="1" value="0" />
         </div>
         <div class="row combo">
@@ -53,18 +63,18 @@
         </div>
 
         <div class="row">
-          <label>대비(min/max)</label>
+          <label data-i18n="contrast">Contrast (min/max)</label>
           <input id="rmin" type="range" min="-127" max="0" step="1" value="-50" />
           <input id="rmax" type="range" min="0" max="127" step="1" value="50" />
           <output id="rOut">-50 ~ 50</output>
         </div>
 
         <div class="row buttons">
-          <button id="play" title="자동 모핑">▶ 재생</button>
-          <button id="skipDeg" class="toggle" title="중복 프레임 건너뛰기">중복 건너뛰기</button>
-          <button id="compare" class="toggle" title="좌우 분할 비교">⇆ 비교 모드</button>
-          <button id="bookmark" title="현재 조합 고정">📌 북마크</button>
-          <button id="share" title="현재 상태 URL 복사">🔗 공유</button>
+          <button id="play" data-i18n-title="playTitle" title="Auto morph">▶ Play</button>
+          <button id="skipDeg" class="toggle" data-i18n="skipDup" data-i18n-title="skipDupTitle" title="Skip degenerate frames">Skip duplicates</button>
+          <button id="compare" class="toggle" data-i18n="compare" data-i18n-title="compareTitle" title="Side-by-side compare">⇆ Compare</button>
+          <button id="bookmark" data-i18n="bookmark" data-i18n-title="bookmarkTitle" title="Pin current combo">📌 Bookmark</button>
+          <button id="share" data-i18n="share" data-i18n-title="shareTitle" title="Copy current state URL">🔗 Share</button>
         </div>
 
         <div id="filmstrip" class="row filmstrip"></div>

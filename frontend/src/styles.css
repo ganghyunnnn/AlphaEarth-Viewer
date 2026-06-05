@@ -48,9 +48,50 @@ body.compare-on .mapbadge { display: block; }
 #topbar {
   position: absolute; top: 12px; left: 12px; z-index: 5;
   background: var(--panel); padding: 8px 14px; border-radius: 10px;
-  backdrop-filter: blur(6px); display: flex; gap: 10px; align-items: baseline;
+  backdrop-filter: blur(6px); display: flex; gap: 10px; align-items: center;
+  flex-wrap: wrap; max-width: min(92vw, 600px);
 }
 #topbar .sub { color: var(--muted); font-size: 12px; }
+
+/* 지명/좌표 검색 */
+.search { position: relative; display: flex; align-items: center; gap: 4px; }
+.search input {
+  width: 220px; max-width: 48vw;
+  background: #0d1117; color: var(--fg);
+  border: 1px solid #30363d; border-radius: 8px;
+  padding: 6px 10px; font-size: 13px; outline: none;
+}
+.search input:focus { border-color: var(--accent); }
+.search-btn {
+  background: #21262d; color: var(--fg); border: 1px solid #30363d;
+  border-radius: 8px; padding: 6px 8px; cursor: pointer; font-size: 13px; line-height: 1;
+}
+.search-btn:hover { border-color: var(--accent); }
+.search-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 10;
+  max-height: 280px; overflow-y: auto;
+  background: var(--panel); border: 1px solid #30363d; border-radius: 10px;
+  backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,.4);
+}
+.search-item {
+  display: block; width: 100%; text-align: left;
+  background: transparent; color: var(--fg); border: none;
+  border-bottom: 1px solid #21262d; padding: 8px 10px;
+  font-size: 12px; line-height: 1.35; cursor: pointer;
+}
+.search-item:last-child { border-bottom: none; }
+.search-item:hover { background: #21262d; }
+.search-msg { padding: 8px 10px; color: var(--muted); font-size: 12px; }
+
+/* 언어 토글(우상단) */
+.lang-toggle {
+  position: absolute; top: 12px; right: 12px; z-index: 6;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid #30363d; border-radius: 8px;
+  padding: 6px 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+.lang-toggle:hover { border-color: var(--accent); }
 
 #panel {
   position: absolute; bottom: 16px; left: 12px; right: 12px; z-index: 5;

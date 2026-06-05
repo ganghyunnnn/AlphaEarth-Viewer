@@ -2,8 +2,10 @@ import { Viewer } from "./viewer.js";
 import { ScrubControl } from "./scrubbar.js";
 import { Prefetcher } from "./prefetch.js";
 import { CompareController } from "./compare.js";
+import { SearchControl } from "./search.js";
 import { readState, pushState, shareUrl } from "./state.js";
 import { TOTAL, indexToTriple } from "./graycode.js";
+import { applyI18n, setLang, getLang, onLangChange, t } from "./i18n.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -180,7 +182,7 @@ $("share").addEventListener("click", async () => {
   const url = shareUrl(state);
   try {
     await navigator.clipboard.writeText(url);
-    flash($("share"), "복사됨!");
+    flash($("share"), t("copied"));
   } catch {
     prompt("공유 URL", url);
   }
@@ -202,6 +204,25 @@ viewer.onIdle = () => pfSettle();
 viewer.whenReady(() => {
   scrub.init(state.scrub); // triple 확정 → onChange → viewer.setRender → 모자이크 소스 생성
   if (state.compare) setCompare(true); // permalink 복원
+});
+
+// --- 다국어(i18n) + 언어 토글 -------------------------------------------
+applyI18n(); // 정적 텍스트(data-i18n) 적용
+function syncLangUI() {
+  document.title = t("appTitle");
+  // 토글 버튼은 '전환 대상' 언어를 표시
+  $("langToggle").textContent = getLang() === "en" ? "한국어" : "EN";
+}
+syncLangUI();
+onLangChange(syncLangUI);
+$("langToggle").addEventListener("click", () => setLang(getLang() === "en" ? "ko" : "en"));
+
+// --- 지명/좌표 검색 -----------------------------------------------------
+new SearchControl({
+  form: $("searchForm"),
+  input: $("searchInput"),
+  results: $("searchResults"),
+  map: viewer.map,
 });
 
 function flash(btn, text) {

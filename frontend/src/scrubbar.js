@@ -1,5 +1,6 @@
 // 단일 그레이코드 스크럽 바 + 칩/필름스트립/북마크/재생 제어.
 import { indexToTriple, tripleToIndex, bandName, isDegenerate, step, TOTAL } from "./graycode.js";
+import { t, onLangChange } from "./i18n.js";
 
 const FILMSTRIP_N = 9; // 필름스트립 미리보기 개수
 
@@ -44,6 +45,15 @@ export class ScrubControl {
     });
 
     this.index = 0;
+    e.play.textContent = t("play");
+    // 언어 변경 시 동적 문자열(재생/정지·중복) 갱신
+    onLangChange(() => this.refreshI18n());
+  }
+
+  // 언어 토글 후 JS가 소유한 텍스트만 다시 그린다(정적 텍스트는 applyI18n 담당).
+  refreshI18n() {
+    this.els.play.textContent = this.playing ? t("pause") : t("play");
+    this._renderChips();
   }
 
   get triple() {
@@ -78,7 +88,7 @@ export class ScrubControl {
 
   togglePlay() {
     this.playing = !this.playing;
-    this.els.play.textContent = this.playing ? "⏸ 정지" : "▶ 재생";
+    this.els.play.textContent = this.playing ? t("pause") : t("play");
     if (this.playing) {
       this._timer = setInterval(() => {
         this.set(step(this.index, +1, this.skipDegenerate), true);
@@ -116,7 +126,7 @@ export class ScrubControl {
     this.els.bandG.value = g;
     this.els.bandB.value = b;
     this.els.idxIn.value = this.index;
-    this.els.idxDup.textContent = isDegenerate(this.triple) ? " (중복)" : "";
+    this.els.idxDup.textContent = isDegenerate(this.triple) ? t("dup") : "";
   }
 
   _renderFilmstrip() {

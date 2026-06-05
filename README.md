@@ -1,76 +1,90 @@
 # alphaearth-vis
 
-AlphaEarth(Google Satellite Embedding V1)의 64차원 임베딩을 **인증 없이** 브라우저에서 자유롭게 RGB 시각화하는 도구. **Docker 한 줄로 누구나 로컬에서 띄워** 쓸 수 있다(호스팅된 공개 인스턴스는 없음).
+English | [한국어](README.ko.md)
 
-![스크린샷: 서울 A01·A16·A09](docs/screenshot.png)
+A browser-based RGB visualizer for the 64-dimensional embeddings of AlphaEarth (Google Satellite Embedding V1) — **no authentication required**. Spin it up locally with a single Docker command (there is no hosted public instance).
 
-> 상태: **MVP 동작 — 브라우저 라이브 검증 완료(Playwright PASS).** 전 지구 모자이크 타일 + 그레이코드 스크럽 + 타일 캐시.
+![Screenshot: Seoul A01·A16·A09](docs/screenshot.png)
 
-기존 도구(geoai/leafmap `add_alphaearth_gui`, edgeoinnovations 뷰어)는 모두 Google Earth Engine 인증과 Jupyter 환경을 요구한다. 이 프로젝트는 **공개 COG + 자체 타일 서버**로 그 빗장을 없앤다.
+> Status: **Working MVP — live browser-verified (Playwright PASS).** Global mosaic tiles + gray-code scrub + tile cache.
 
-## 핵심 아이디어
+Existing tools (geoai/leafmap `add_alphaearth_gui`, the edgeoinnovations viewer) all require Google Earth Engine authentication and a Jupyter environment. This project removes that barrier with **public COGs + a self-hosted tile server**.
 
-64밴드(A00–A63) 중 3개를 R/G/B에 배정해 시각화한다. 채널별 드롭다운 대신 **단일 스크럽 바**를 끌면, 3채널×64밴드 큐브(64³=262,144)를 **반사 그레이코드** 순서로 훑는다. 인접 프레임은 한 채널이 ±1밴드만 바뀌므로 화면이 끊김 없이 모핑된다 — 찾기 도구이자 시연 도구.
+## Core idea
+
+Every pixel has 64 bands (A00–A63); pick any 3 to map to R/G/B. Instead of three dropdowns, drag a **single scrub bar** to sweep the 3-channel × 64-band cube (64³ = 262,144) in **reflected gray-code** order. Adjacent frames differ by only ±1 band in one channel, so the map morphs smoothly — it's both a discovery tool and a presentation tool.
 
 ```
-[Vite + MapLibre GL JS (바닐라 ESM)]
+[Vite + MapLibre GL JS (vanilla ESM)]
    ?scrub=<index>&year=2024&min=-50&max=50
-        │  i ↔ (R,G,B)  : graycode.js (닫힌 수식, 백엔드 불필요)
+        │  index ↔ (R,G,B) : graycode.js (closed-form, no backend)
         ▼
 [FastAPI]
-   ├─ /api/tiles?bbox=&year=   : DuckDB로 aef_index.parquet 질의 → COG URL 목록
-   └─ /cog, /mosaicjson        : TiTiler 동적 RGB 타일 (bidx + rescale)
+   ├─ /api/tiles?bbox=&year=   : DuckDB query over aef_index.parquet → COG URL list
+   └─ /cog, /mosaicjson        : TiTiler dynamic RGB tiles (bidx + rescale)
         ▼
-[공개 COG: data.source.coop/tge-labs/aef/v1/annual]  (인증·egress 무료, 전 지구)
+[Public COGs: data.source.coop/tge-labs/aef/v1/annual]  (no auth, free egress, global)
 ```
 
-## 데이터
+## Features
 
-- 데이터셋: AlphaEarth Foundations Satellite Embeddings (Source Cooperative `tge-labs/aef`)
-- 공간 인덱스: `https://data.source.coop/tge-labs/aef/v1/annual/aef_index.parquet`
-- 연 단위 2017–2025, 10m 해상도, 64밴드, 8192px UTM 타일, 총 302,466개
-- 저장 형식: **int8**(-128..127, nodata=-128). EE의 float `±0.3`은 int8 `±38`에 해당하며, 경험상 `±50`이 디테일 최상 → 기본 rescale `-50,50`
+- **Single gray-code scrub** across all 262,144 band combinations; type R/G/B band numbers or the combo index directly.
+- **Compare (swipe) mode** — split the map and drag the divider to compare two combos/years side by side.
+- **Place & coordinate search** — type a place name (OpenStreetMap / Nominatim) or `lat, lng` to fly there.
+- **Language toggle** — English / 한국어 (English is the default).
+- **Permalink** — view state is serialized into the URL for sharing.
 
-## 디렉터리
+## Data
+
+- Dataset: AlphaEarth Foundations Satellite Embeddings (Source Cooperative `tge-labs/aef`)
+- Spatial index: `https://data.source.coop/tge-labs/aef/v1/annual/aef_index.parquet`
+- Annual 2017–2025, 10 m resolution, 64 bands, 8192 px UTM tiles, 302,466 total
+- Storage: **int8** (−128..127, nodata=−128). EE's float `±0.3` maps to int8 `±38`; empirically `±50` yields the richest detail → default rescale `−50,50`
+
+## Layout
 
 ```
-backend/   FastAPI + TiTiler + DuckDB 인덱스 질의
-frontend/  Vite + MapLibre + 그레이코드 스크럽 바 (바닐라 ESM)
-docs/      설계 문서
+backend/   FastAPI + TiTiler + DuckDB index queries
+frontend/  Vite + MapLibre + gray-code scrub bar (vanilla ESM)
+docs/      design docs
 ```
 
-## 실행
+## Run
 
-### Docker (권장 — 한 줄)
+### Docker (recommended — one line)
 
 ```bash
 docker compose up --build      # → http://localhost:8080
 ```
-(nginx가 정적 프론트 서빙 + `/api`를 백엔드로 프록시. 타일 캐시는 named volume에 영속.)
+(nginx serves the static frontend and proxies `/api` to the backend. The tile cache persists in a named volume.)
 
-> ⚠️ **로컬/사내용 전제.** 외부 인터넷에 그대로 노출하려면 두 가지를 먼저 손봐야 한다 — (1) `/cog/*`의 raw TiTiler가 임의 `?url=` COG를 렌더하므로 SSRF 방지를 위해 마운트 제거 또는 URL 화이트리스트 적용, (2) 디스크 타일 캐시는 축출이 없어 무한히 커지므로 용량 캡/TTL 또는 앞단 CDN 필요.
+> ⚠️ **Intended for local / intranet use.** Before exposing it to the public internet, fix two things: (1) the raw TiTiler at `/cog/*` will render an arbitrary `?url=` COG, so remove that mount or apply a URL allowlist to prevent SSRF; (2) the disk tile cache has no eviction and grows without bound — add a size cap/TTL or put a CDN in front.
 
-### 로컬 개발
+### Local development
 
 ```bash
-# 백엔드
+# backend
 cd backend && python -m venv .venv && .venv/Scripts/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# 프론트(별 터미널)
-cd frontend && npm install && npm run dev   # vite가 /api를 8000으로 프록시
+# frontend (separate terminal)
+cd frontend && npm install && npm run dev   # vite proxies /api to 8000
 
-# 그레이코드 단위 테스트(의존성 없이 즉시 실행)
+# gray-code unit tests (no deps, runs instantly)
 node frontend/test/graycode.test.mjs
 ```
 
-## 검증 현황
+## Verification
 
-- 그레이코드: 전체 262,144 프레임 단위거리/왕복/전단사 테스트 PASS
-- 인덱스 질의: 원격 parquet 실데이터(서울/SF/파리) 검증, 적재 후 ~10ms
-- 타일 렌더: 콜드 ~30–40s(원격 COG), 캐시 HIT ~5–10ms
-- 브라우저: Playwright 헤드리스 PASS(맵 렌더 + 스크럽→재렌더)
-- Docker: 두 이미지 빌드 + compose 스택 서비스 확인
+- Gray-code: unit-distance / round-trip / bijection tested across all 262,144 frames — PASS
+- Index query: validated against the live remote parquet (Seoul / SF / Paris), ~10 ms after load
+- Tile render: cold ~30–40 s (remote COG), cache HIT ~5–10 ms
+- Browser: Playwright headless PASS (map render + scrub re-render + i18n toggle + coordinate search)
+- Docker: both images build + compose stack verified
 
-자세한 설계는 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 참고.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design (Korean).
+
+## License
+
+[MIT](LICENSE)
