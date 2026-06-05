@@ -35,16 +35,6 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
   box-shadow: 0 2px 8px rgba(0,0,0,.5); user-select: none;
 }
 
-/* 분할면 식별 배지 (비교 모드에서만) */
-.mapbadge {
-  position: absolute; top: 12px; z-index: 4; display: none;
-  padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 13px;
-  color: #0d1117; box-shadow: 0 2px 8px rgba(0,0,0,.4);
-}
-.mapbadge.a { right: calc(50% + 10px); background: #4dabf7; }
-.mapbadge.b { left: calc(50% + 10px); background: #ffa94d; }
-body.compare-on .mapbadge { display: block; }
-
 #topbar {
   position: absolute; top: 12px; left: 12px; z-index: 5;
   background: var(--panel); padding: 8px 14px; border-radius: 10px;
