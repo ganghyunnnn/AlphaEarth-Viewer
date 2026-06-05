@@ -53,9 +53,12 @@ body.compare-on .mapbadge { display: block; }
 }
 #topbar .sub { color: var(--muted); font-size: 12px; }
 
-/* 지명/좌표 검색 (🔍 토글로 접기) */
+/* 지명/좌표 검색 (화살표 토글로 접기 — 펼침 ❮ / 접힘 ❯) */
 .searchbox { position: relative; display: flex; align-items: center; gap: 4px; }
 .searchbox.collapsed .search { display: none; }
+/* 화살표 토글: 패널 접기(▾)와 동일하게 상태에 따라 회전 */
+.search-arrow { font-size: 15px; font-weight: 700; line-height: 1; padding: 5px 9px; transition: transform .15s; }
+.searchbox.collapsed .search-arrow { transform: rotate(180deg); }
 .search { position: relative; display: flex; align-items: center; gap: 4px; }
 .search input {
   width: 220px; max-width: 48vw;
