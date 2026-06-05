@@ -18,6 +18,24 @@ export function baseStyle(basemapTiles) {
   };
 }
 
+// 베이스맵 전환: base 소스/레이어를 재생성해 확실히 새 타일을 로드한다.
+// (RasterTileSource.setTiles는 브라우저에 따라 이미 로드된 타일을 즉시 새로고침하지
+//  않아 A/B가 서로 다른 베이스맵으로 보일 수 있다. 맵 A·B가 같은 헬퍼를 쓰므로 항상 일치.)
+// base 레이어는 항상 aef 레이어 아래에 재삽입한다.
+export function setBasemap(map, tiles, attribution = "") {
+  const run = () => {
+    if (map.getLayer("base")) map.removeLayer("base");
+    if (map.getSource("base")) map.removeSource("base");
+    map.addSource("base", { type: "raster", tiles, tileSize: 256, attribution });
+    map.addLayer(
+      { id: "base", type: "raster", source: "base" },
+      map.getLayer("aef") ? "aef" : undefined,
+    );
+  };
+  if (map.loaded()) run();
+  else map.once("load", run);
+}
+
 // 맵에 AEF 소스/레이어를 적용(없으면 생성, 있으면 타일 URL만 교체).
 //   render = {year, triple, range:{min,max}}
 export function applyAef(map, render) {

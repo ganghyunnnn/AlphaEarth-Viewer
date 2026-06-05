@@ -5,7 +5,7 @@
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { BASEMAP_TILES } from "./config.js";
-import { applyAef, baseStyle, AEF_MINZOOM, AEF_MAXZOOM } from "./aeflayer.js";
+import { applyAef, baseStyle, setBasemap as setMapBasemap, AEF_MINZOOM, AEF_MAXZOOM } from "./aeflayer.js";
 
 // 프리페처가 동일 줌 범위를 써야 하므로 재노출(기존 import 경로 호환).
 export { AEF_MINZOOM, AEF_MAXZOOM };
@@ -67,11 +67,9 @@ export class Viewer {
     this._apply();
   }
 
-  // 베이스맵 전환 → base 소스 타일 URL 교체(AEF 레이어는 그대로 위에 유지).
-  setBasemapTiles(tiles) {
-    const apply = () => this.map.getSource("base")?.setTiles(tiles);
-    if (this.map.loaded()) apply();
-    else this.map.once("load", apply);
+  // 베이스맵 전환 → base 소스/레이어 재생성(AEF 레이어는 그대로 위에 유지).
+  setBasemapTiles(tiles, attribution) {
+    setMapBasemap(this.map, tiles, attribution);
   }
 
   // AlphaEarth 레이어 투명도(0..1) — base 위 raster-opacity.

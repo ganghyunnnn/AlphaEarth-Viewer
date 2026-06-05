@@ -187,6 +187,11 @@ function setCompare(on) {
     }
     compare.enable({ year: B.year, triple: indexToTriple(B.scrub), range: { min: B.min, max: B.max } });
     compare.setSwipe(state.swipe);
+    // 켤 때 B를 현재 전역 뷰 설정(베이스맵/투명도/레이어 on·off)과 명시적으로 일치시킨다.
+    const bm = BASEMAPS[currentBasemap];
+    compare.setBasemapTiles(bm.tiles, bm.attribution);
+    compare.setOpacity(currentOpacity);
+    compare.setVisible(aefOn);
   } else {
     compare.disable();
     setActiveSide("A"); // 단일 뷰 → A 편집으로 복귀
@@ -271,9 +276,9 @@ function setBasemap(key) {
   } catch {
     /* private mode 등 — 무시 */
   }
-  const tiles = BASEMAPS[key].tiles;
-  viewer.setBasemapTiles(tiles);
-  compare.setBasemapTiles(tiles);
+  const { tiles, attribution } = BASEMAPS[key];
+  viewer.setBasemapTiles(tiles, attribution);
+  compare.setBasemapTiles(tiles, attribution);
   document
     .querySelectorAll("#basemapTabs .seg-btn")
     .forEach((b) => b.classList.toggle("on", b.dataset.bm === key));

@@ -9,7 +9,7 @@
 // 디바이더 핸들만 최상단에서 자체 드래그 핸들러로 경계를 옮긴다.
 import maplibregl from "maplibre-gl";
 import { BASEMAP_TILES } from "./config.js";
-import { applyAef, baseStyle } from "./aeflayer.js";
+import { applyAef, baseStyle, setBasemap as setMapBasemap } from "./aeflayer.js";
 
 export class CompareController {
   constructor({ mapA, containerB, divider }) {
@@ -124,13 +124,11 @@ export class CompareController {
     }
   }
 
-  // 베이스맵 전환 → 맵 B의 base 소스 타일 교체(아직 없으면 다음 생성 시 반영).
-  setBasemapTiles(tiles) {
+  // 베이스맵 전환 → 맵 B의 base 소스/레이어 재생성(아직 없으면 다음 생성 시 반영).
+  setBasemapTiles(tiles, attribution) {
     this._basemapTiles = tiles;
     if (!this.mapB) return;
-    const apply = () => this.mapB.getSource("base")?.setTiles(tiles);
-    if (this.mapB.loaded()) apply();
-    else this.mapB.once("load", apply);
+    setMapBasemap(this.mapB, tiles, attribution);
   }
 
   // 경계 위치(0..1) 설정 → B를 왼쪽에서 swipe만큼 잘라 오른쪽만 노출.
