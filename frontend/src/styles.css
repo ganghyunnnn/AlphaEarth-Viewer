@@ -112,6 +112,17 @@ body.compare-on .mapbadge { display: block; }
   font: inherit; text-align: right; font-variant-numeric: tabular-nums; cursor: text;
 }
 .rnum:focus { outline: none; color: var(--accent); -webkit-text-fill-color: var(--accent); }
+
+/* AlphaEarth 레이어 on/off 토글(투명도 옆) */
+.aef-toggle {
+  flex: none; background: #21262d; color: var(--fg);
+  border: 1px solid #30363d; border-radius: 8px;
+  padding: 4px 9px; cursor: pointer; font-size: 11px; font-weight: 700; line-height: 1;
+  min-width: 40px; text-align: center;
+}
+.aef-toggle:hover { border-color: var(--accent); }
+.aef-toggle.on { background: var(--accent); color: #0d1117; border-color: var(--accent); }
+#opacity:disabled { opacity: .4; cursor: not-allowed; }
 .rnum::-webkit-outer-spin-button,
 .rnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .rnum { -moz-appearance: textfield; appearance: textfield; }

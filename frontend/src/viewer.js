@@ -46,9 +46,12 @@ export class Viewer {
 
   _apply() {
     applyAef(this.map, { year: this.year, triple: this.triple, range: this.range });
-    // 레이어 재적용(setTiles)은 paint 속성을 유지하지만, 최초 생성 직후엔 명시 적용 필요.
-    if (this._opacity != null && this.map.getLayer("aef")) {
-      this.map.setPaintProperty("aef", "raster-opacity", this._opacity);
+    // 레이어 재적용(setTiles)은 속성을 유지하지만, 최초 생성 직후엔 명시 적용 필요.
+    if (this.map.getLayer("aef")) {
+      if (this._opacity != null) this.map.setPaintProperty("aef", "raster-opacity", this._opacity);
+      if (this._visible != null) {
+        this.map.setLayoutProperty("aef", "visibility", this._visible ? "visible" : "none");
+      }
     }
   }
 
@@ -76,6 +79,14 @@ export class Viewer {
     this._opacity = v;
     if (this.map.getLayer && this.map.getLayer("aef")) {
       this.map.setPaintProperty("aef", "raster-opacity", v);
+    }
+  }
+
+  // AlphaEarth 레이어 on/off — visibility(none이면 타일 요청도 중단).
+  setVisible(on) {
+    this._visible = on;
+    if (this.map.getLayer && this.map.getLayer("aef")) {
+      this.map.setLayoutProperty("aef", "visibility", on ? "visible" : "none");
     }
   }
 }

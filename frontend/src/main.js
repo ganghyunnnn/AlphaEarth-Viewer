@@ -233,6 +233,7 @@ viewer.whenReady(() => {
   scrub.init(state.scrub); // triple 확정 → onChange → viewer.setRender → 모자이크 소스 생성
   setBasemap(currentBasemap); // 저장된 베이스맵 복원(다크 외일 때 base 타일 교체)
   setOpacity(currentOpacity, false); // 저장된 투명도 적용(레이어 생성 후)
+  setAefOn(aefOn, false); // 저장된 레이어 on/off 적용
   if (state.compare) setCompare(true); // permalink 복원
 });
 
@@ -301,6 +302,28 @@ $("opacity").value = String(currentOpacity);
 $("opacityOut").textContent = Math.round(currentOpacity * 100) + "%";
 $("opacity").addEventListener("input", () => setOpacity(Number($("opacity").value), false));
 $("opacity").addEventListener("change", () => setOpacity(Number($("opacity").value), true));
+
+// --- AlphaEarth 레이어 on/off — 끄면 레이어 숨김(타일 요청도 중단) -------
+let aefOn = localStorage.getItem("aef_on");
+aefOn = aefOn === null ? true : aefOn === "1";
+function setAefOn(on, commit) {
+  aefOn = on;
+  viewer.setVisible(on);
+  compare.setVisible(on);
+  const btn = $("aefToggle");
+  btn.classList.toggle("on", on);
+  btn.setAttribute("aria-pressed", String(on));
+  btn.textContent = on ? "ON" : "OFF";
+  $("opacity").disabled = !on; // 꺼진 상태에선 투명도 슬라이더 비활성
+  if (commit) {
+    try {
+      localStorage.setItem("aef_on", on ? "1" : "0");
+    } catch {
+      /* private mode 등 — 무시 */
+    }
+  }
+}
+$("aefToggle").addEventListener("click", () => setAefOn(!aefOn, true));
 
 function flash(btn, text) {
   const old = btn.textContent;

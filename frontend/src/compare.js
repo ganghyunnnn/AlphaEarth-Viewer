@@ -23,6 +23,7 @@ export class CompareController {
     this._renderB = null; // {year, triple, range}
     this._basemapTiles = null; // 현재 베이스맵 타일(맵 B 생성/전환에 사용)
     this._opacity = null; // 현재 AEF 레이어 투명도(맵 B 생성 후 적용)
+    this._visible = null; // 현재 AEF 레이어 on/off(맵 B 생성 후 적용)
     this.onSwipeEnd = null; // (swipe) => void — 드래그 종료 시(상태 저장용)
 
     this._onDown = this._onDown.bind(this);
@@ -96,8 +97,11 @@ export class CompareController {
     if (!this.mapB) return;
     const run = () => {
       applyAef(this.mapB, render);
-      if (this._opacity != null && this.mapB.getLayer("aef")) {
-        this.mapB.setPaintProperty("aef", "raster-opacity", this._opacity);
+      if (this.mapB.getLayer("aef")) {
+        if (this._opacity != null) this.mapB.setPaintProperty("aef", "raster-opacity", this._opacity);
+        if (this._visible != null) {
+          this.mapB.setLayoutProperty("aef", "visibility", this._visible ? "visible" : "none");
+        }
       }
     };
     if (this.mapB.loaded()) run();
@@ -109,6 +113,14 @@ export class CompareController {
     this._opacity = v;
     if (this.mapB && this.mapB.getLayer && this.mapB.getLayer("aef")) {
       this.mapB.setPaintProperty("aef", "raster-opacity", v);
+    }
+  }
+
+  // AEF 레이어 on/off — 맵 B에 적용(아직 없으면 다음 렌더 시 반영).
+  setVisible(on) {
+    this._visible = on;
+    if (this.mapB && this.mapB.getLayer && this.mapB.getLayer("aef")) {
+      this.mapB.setLayoutProperty("aef", "visibility", on ? "visible" : "none");
     }
   }
 
