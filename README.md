@@ -1,6 +1,6 @@
 # alphaearth-vis
 
-AlphaEarth(Google Satellite Embedding V1)의 64차원 임베딩을 **인증 없이** 브라우저에서 자유롭게 RGB 시각화하는 공개 웹 서비스.
+AlphaEarth(Google Satellite Embedding V1)의 64차원 임베딩을 **인증 없이** 브라우저에서 자유롭게 RGB 시각화하는 도구. **Docker 한 줄로 누구나 로컬에서 띄워** 쓸 수 있다(호스팅된 공개 인스턴스는 없음).
 
 ![스크린샷: 서울 A01·A16·A09](docs/screenshot.png)
 
@@ -14,7 +14,7 @@ AlphaEarth(Google Satellite Embedding V1)의 64차원 임베딩을 **인증 없�
 
 ```
 [Vite + MapLibre GL JS (바닐라 ESM)]
-   ?i=<scrub index>&year=2024&min=-0.3&max=0.3
+   ?scrub=<index>&year=2024&min=-50&max=50
         │  i ↔ (R,G,B)  : graycode.js (닫힌 수식, 백엔드 불필요)
         ▼
 [FastAPI]
@@ -47,6 +47,8 @@ docs/      설계 문서
 docker compose up --build      # → http://localhost:8080
 ```
 (nginx가 정적 프론트 서빙 + `/api`를 백엔드로 프록시. 타일 캐시는 named volume에 영속.)
+
+> ⚠️ **로컬/사내용 전제.** 외부 인터넷에 그대로 노출하려면 두 가지를 먼저 손봐야 한다 — (1) `/cog/*`의 raw TiTiler가 임의 `?url=` COG를 렌더하므로 SSRF 방지를 위해 마운트 제거 또는 URL 화이트리스트 적용, (2) 디스크 타일 캐시는 축출이 없어 무한히 커지므로 용량 캡/TTL 또는 앞단 CDN 필요.
 
 ### 로컬 개발
 
