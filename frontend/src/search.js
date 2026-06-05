@@ -1,9 +1,9 @@
-// 지명/좌표 검색 → 지도 이동.
-//   - "lat, lng" (또는 "lng lat") 숫자쌍 → 즉시 flyTo (Google Maps 복붙 순서 가정: lat 먼저)
-//   - 그 외 텍스트 → OpenStreetMap Nominatim 지오코딩(키 불필요, CORS 허용) → 결과 목록
+﻿// Place name / coordinate search → map navigation.
+//   - "lat, lng" (or "lng lat") numeric pair → immediate flyTo (assumes Google Maps paste order: lat first)
+//   - Any other text → OpenStreetMap Nominatim geocoding (no API key required, CORS allowed) → result list
 //
-// Nominatim 사용 정책상 키 입력마다 호출하지 않고 제출(Enter/버튼) 시에만 질의한다.
-// 비교 모드의 맵 B는 카메라가 A에 동기화돼 있어 A만 이동하면 함께 따라온다.
+// Per Nominatim usage policy, queries are sent only on submit (Enter / button), not on every keystroke.
+// Map B in compare mode has its camera synced to A, so moving A also moves B.
 import { t, getLang } from "./i18n.js";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
@@ -21,7 +21,7 @@ export class SearchControl {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Escape") this._hide();
     });
-    // 바깥 클릭 시 결과 닫기
+    // Close results on outside click
     document.addEventListener("click", (e) => {
       if (!form.contains(e.target)) this._hide();
     });
@@ -34,7 +34,7 @@ export class SearchControl {
 
   _msg(text) {
     this.results.innerHTML = `<div class="search-msg"></div>`;
-    this.results.firstChild.textContent = text; // textContent로 안전 삽입
+    this.results.firstChild.textContent = text; // safe insertion via textContent
     this.results.hidden = false;
   }
 
@@ -67,7 +67,7 @@ export class SearchControl {
     }
   }
 
-  // "37.5665, 126.978" / "37.5665 126.978" → {lat,lng}. 범위로 lat/lng 순서 자동 보정.
+  // "37.5665, 126.978" / "37.5665 126.978" → {lat,lng}. Auto-corrects lat/lng order based on valid range.
   _parseCoord(q) {
     const m = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
     if (!m) return null;
@@ -100,7 +100,7 @@ export class SearchControl {
   }
 
   _fitItem(it) {
-    // Nominatim boundingbox: [south, north, west, east] (문자열)
+    // Nominatim boundingbox: [south, north, west, east] (strings)
     if (Array.isArray(it.boundingbox) && it.boundingbox.length === 4) {
       const [s, n, w, e] = it.boundingbox.map(Number);
       this.map.fitBounds(

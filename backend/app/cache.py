@@ -1,7 +1,8 @@
-"""간단한 메모리(LRU) + 디스크 타일 캐시.
+"""Simple in-memory (LRU) + disk tile cache.
 
-콜드 타일 렌더(원격 COG 읽기)는 수 초가 걸리므로, 동일 (z/x/y/밴드/대비/연도)
-요청은 캐시로 즉시 응답한다. 운영 환경에서는 이 앞단에 CDN을 두는 것이 정석.
+A cold tile render (remote COG read) takes several seconds, so identical
+(z/x/y/band/contrast/year) requests are answered instantly from the cache.
+In production the canonical approach is to put a CDN in front of this.
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ class TileCache:
             tmp = p + ".tmp"
             with open(tmp, "wb") as f:
                 f.write(data)
-            os.replace(tmp, p)  # 원자적 교체
+            os.replace(tmp, p)  # atomic replace
 
     def _mem_put(self, key: str, data: bytes) -> None:
         with self._lock:

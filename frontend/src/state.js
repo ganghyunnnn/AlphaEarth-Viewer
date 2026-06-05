@@ -1,4 +1,4 @@
-// URL permalink: 전체 뷰어 상태를 쿼리스트링으로 직렬화/복원.
+// URL permalink: serializes/restores the full viewer state as a query string.
 import { DEFAULTS } from "./config.js";
 
 const KEYS = [
@@ -18,7 +18,7 @@ export function readState() {
   return s;
 }
 
-// 기본값과 다른 항목만 URL에 담아 간결하게 유지
+// Only include entries that differ from defaults, keeping the URL concise.
 export function toQuery(s) {
   const p = new URLSearchParams();
   for (const k of KEYS) {

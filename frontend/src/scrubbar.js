@@ -1,21 +1,21 @@
-// 단일 그레이코드 스크럽 바 + 칩/필름스트립/북마크/재생 제어.
+// Single gray-code scrub bar + chips / filmstrip / bookmarks / playback controls.
 import { indexToTriple, tripleToIndex, bandName, isDegenerate, step, TOTAL } from "./graycode.js";
 import { t, onLangChange } from "./i18n.js";
 
-const FILMSTRIP_N = 9; // 필름스트립 미리보기 개수
+const FILMSTRIP_N = 9; // number of filmstrip preview thumbnails
 
 export class ScrubControl {
   constructor(els, { onChange, makePreviewUrl }) {
     this.els = els; // {scrub, bandR,bandG,bandB, idxIn, idxDup, play, skipDeg, bookmark, filmstrip, bookmarks}
     this.onChange = onChange; // (index, triple, {commit}) => void
-    this.makePreviewUrl = makePreviewUrl; // (triple) => string|null  (필름스트립 썸네일)
+    this.makePreviewUrl = makePreviewUrl; // (triple) => string|null  (filmstrip thumbnail URL)
     this.skipDegenerate = false;
     this.playing = false;
     this._timer = null;
     this.marks = [];
 
     const e = els;
-    // 드래그 중에는 commit=false(프리뷰), 손 떼면 commit=true(풀해상도)
+    // While dragging: commit=false (preview); on release: commit=true (full resolution)
     e.scrub.addEventListener("input", () => this.set(Number(e.scrub.value), false));
     e.scrub.addEventListener("change", () => this.set(Number(e.scrub.value), true));
     e.play.addEventListener("click", () => this.togglePlay());
@@ -25,19 +25,19 @@ export class ScrubControl {
     });
     e.bookmark.addEventListener("click", () => this.addBookmark());
 
-    // R/G/B 밴드 번호 직접 입력 → triple→그레이코드 인덱스 역산 후 점프(commit).
-    // change(Enter/blur/스피너)에서만 반영해 여러 자리 입력 중 튀지 않게 한다.
+    // Direct R/G/B band number input → invert triple to gray-code index, then jump (commit).
+    // Only applied on change (Enter / blur / spinner) to avoid mid-entry jumps.
     for (const inp of [e.bandR, e.bandG, e.bandB]) {
       inp.addEventListener("change", () => this._onBandInput());
     }
 
-    // 조합 인덱스(#) 직접 입력 → 해당 그레이코드 인덱스로 점프(범위 밖은 래핑).
+    // Direct combo index (#) input → jump to the corresponding gray-code index (out-of-range values wrap).
     e.idxIn.addEventListener("change", () => {
       if (e.idxIn.value === "" || Number.isNaN(Number(e.idxIn.value))) return;
       this.set(Number(e.idxIn.value), true);
     });
 
-    // 키보드 좌우 화살표로 한 프레임씩(중복 건너뛰기 반영)
+    // Left/right arrow keys step one frame at a time (respects skip-degenerate setting)
     window.addEventListener("keydown", (ev) => {
       if (ev.target.tagName === "INPUT") return;
       if (ev.key === "ArrowRight") this.set(step(this.index, +1, this.skipDegenerate), true);
@@ -46,11 +46,11 @@ export class ScrubControl {
 
     this.index = 0;
     e.play.textContent = t("play");
-    // 언어 변경 시 동적 문자열(재생/정지·중복) 갱신
+    // Refresh dynamic strings (play/pause, dup label) when the language changes
     onLangChange(() => this.refreshI18n());
   }
 
-  // 언어 토글 후 JS가 소유한 텍스트만 다시 그린다(정적 텍스트는 applyI18n 담당).
+  // After a language toggle, re-render only JS-owned text (static text is handled by applyI18n).
   refreshI18n() {
     this.els.play.textContent = this.playing ? t("pause") : t("play");
     this._renderChips();
@@ -60,7 +60,7 @@ export class ScrubControl {
     return indexToTriple(this.index);
   }
 
-  // 외부(URL 복원)에서 초기 인덱스 주입
+  // Inject an initial index from an external source (e.g. URL restore)
   init(index) {
     this.index = ((index % TOTAL) + TOTAL) % TOTAL;
     this.els.scrub.value = String(this.index);
@@ -77,8 +77,8 @@ export class ScrubControl {
     this.onChange(this.index, this.triple, { commit });
   }
 
-  // 화면(슬라이더·칩·필름스트립)만 갱신하고 onChange는 호출하지 않는다.
-  // 편집 대상(A/B) 전환 시 이미 렌더된 측의 값을 컨트롤에 되불러올 때 사용.
+  // Update the display (slider, chips, filmstrip) without firing onChange.
+  // Used when switching the active side (A/B) to reload the already-rendered value into controls.
   show(index) {
     this.index = ((Math.round(index) % TOTAL) + TOTAL) % TOTAL;
     this.els.scrub.value = String(this.index);
@@ -104,7 +104,7 @@ export class ScrubControl {
     this._renderBookmarks();
   }
 
-  // 밴드 입력값 → 정수 0..63로 보정(빈 값/비정수는 null = 입력 중으로 간주).
+  // Normalize a band input value to an integer 0..63 (empty / non-integer → null = still typing).
   _readBand(el) {
     const v = Number(el.value);
     if (el.value === "" || Number.isNaN(v)) return null;
@@ -121,7 +121,7 @@ export class ScrubControl {
 
   _renderChips() {
     const [r, g, b] = this.triple;
-    // 프로그램적 .value 설정은 input/change 이벤트를 발생시키지 않아 피드백 루프 없음.
+    // Programmatic .value assignment does not fire input/change events, so no feedback loop.
     this.els.bandR.value = r;
     this.els.bandG.value = g;
     this.els.bandB.value = b;

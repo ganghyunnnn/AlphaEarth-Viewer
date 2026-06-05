@@ -1,10 +1,10 @@
-"""alphaearth-vis 백엔드.
+"""AlphaEarth Viewer backend.
 
-- /api/tiles : bbox+year로 교차 COG 목록 질의 (DuckDB 원격 인덱스)
-- /cog/*     : TiTiler 단일 COG 동적 RGB 타일 (bidx + rescale)
-- /mosaicjson/* : TiTiler 모자이크 타일 (2단계 전 지구 매끄러운 줌)
+- /api/tiles : query intersecting COGs by bbox+year (DuckDB remote index)
+- /cog/*     : TiTiler single-COG dynamic RGB tiles (bidx + rescale)
+- /mosaicjson/* : TiTiler mosaic tiles (phase-2 seamless global zoom)
 
-밴드 조합과 rescale은 모두 TiTiler 쿼리 파라미터로 전달된다:
+Band combo and rescale are all passed as TiTiler query parameters:
   /cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png
       ?url={cog}&bidx={r+1}&bidx={g+1}&bidx={b+1}&rescale=-0.3,0.3
 """
@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .cache import TileCache
 from .index import MAX_YEAR, MIN_YEAR, Tile, tiles_for_bbox, warmup
 
-# 타일 캐시(메모리 LRU + 디스크). 운영 시 앞단 CDN 권장.
+# Tile cache (memory LRU + disk). A front CDN is recommended in production.
 TILE_CACHE = TileCache(
     mem_max=2048,
     disk_dir=os.environ.get("AEF_TILE_CACHE", os.path.join(os.getcwd(), "tiles_cache")),
@@ -30,7 +30,7 @@ TILE_CACHE = TileCache(
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 시작 시 인덱스 테이블 적재(≈4s). 첫 사용자 요청 지연 제거.
+    # Load the index table at startup (~4s). Removes the first-request latency.
     with contextlib.suppress(Exception):
         warmup()
     yield
@@ -45,8 +45,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- TiTiler 동적 타일 엔드포인트 마운트 ---------------------------------
-# titiler 미설치 환경(예: 인덱스 질의만 테스트)에서도 앱이 뜨도록 가드.
+# --- mount TiTiler dynamic tile endpoints --------------------------------
+# Guarded so the app still boots without titiler installed (e.g. index-query-only testing).
 try:
     from titiler.core.factory import TilerFactory
 
@@ -58,11 +58,11 @@ try:
 
         mosaic = MosaicTilerFactory(router_prefix="/mosaicjson")
         app.include_router(mosaic.router, prefix="/mosaicjson", tags=["Mosaic"])
-    except Exception:  # titiler.mosaic 미설치
+    except Exception:  # titiler.mosaic not installed
         pass
 
     _TITILER = True
-except Exception:  # titiler.core 미설치
+except Exception:  # titiler.core not installed
     _TITILER = False
 
 
@@ -76,16 +76,17 @@ def health() -> dict:
     }
 
 
-# --- single-flight: 동일 타일의 동시 중복 렌더 합치기 -----------------------
-# 스크럽 시 같은 타일이 취소·재요청되며 같은 렌더가 여러 번 시작되면 느린 콜드
-# 렌더가 브라우저 연결(호스트당 6개)을 중복 점유해 일부 타일이 끝까지 안 뜬다.
-# 리더 1개만 렌더하고, 후속 동일 요청은 리더 완료를 기다렸다 캐시에서 공유한다.
+# --- single-flight: collapse concurrent duplicate renders of the same tile ----
+# While scrubbing, the same tile gets cancelled/re-requested and the same render may
+# start several times; a slow cold render then double-occupies browser connections
+# (6 per host) and some tiles never finish. Only one leader renders; later identical
+# requests wait for the leader and share from the cache.
 _INFLIGHT: dict = {}
 _INFLIGHT_LOCK = threading.Lock()
 
-# 타일 URL은 z/x/y + year + bidx + rescale을 모두 담아 콘텐츠가 URL별 불변이다.
-# → 장기 캐시 안전. 프리페치 fetch()가 이 헤더로 브라우저 캐시를 채우면 이후
-# MapLibre <img> 로드는 네트워크 0(브라우저 캐시 HIT)이 된다. 운영 시 CDN도 활용.
+# The tile URL encodes z/x/y + year + bidx + rescale, so content is immutable per URL.
+# -> safe to cache long-term. When the prefetcher's fetch() fills the browser cache with
+# this header, later MapLibre <img> loads cost zero network (browser cache HIT). Use a CDN in prod too.
 _CACHE_CONTROL = "public, max-age=86400, immutable"
 
 
@@ -99,10 +100,10 @@ def mosaic_tile(
     x: int,
     y: int,
     year: int = Query(2024, ge=MIN_YEAR, le=MAX_YEAR),
-    bidx: list[int] = Query(..., description="R,G,B 밴드(1-indexed) — 3회 반복"),
-    rescale: str = Query("-50,50", description="min,max (int8 스케일)"),
+    bidx: list[int] = Query(..., description="R,G,B bands (1-indexed) -- repeated 3x"),
+    rescale: str = Query("-50,50", description="min,max (int8 scale)"),
 ) -> Response:
-    """인덱스 기반 동적 모자이크 RGB 타일. 캐시 적중 시 즉시 응답."""
+    """Index-based dynamic mosaic RGB tile. Responds instantly on cache hit."""
     rmin, rmax = (float(v) for v in rescale.split(","))
     key = TileCache.key("m", z, x, y, year, tuple(bidx), rmin, rmax)
 
@@ -110,7 +111,7 @@ def mosaic_tile(
     if cached is not None:
         return Response(cached, media_type="image/png", headers=_tile_headers("HIT"))
 
-    # single-flight: 이미 같은 타일을 렌더 중이면 그 완료를 기다린다(리더/팔로워).
+    # single-flight: if the same tile is already rendering, wait for it (leader/follower).
     with _INFLIGHT_LOCK:
         event = _INFLIGHT.get(key)
         leader = event is None
@@ -125,20 +126,20 @@ def mosaic_tile(
             return Response(shared, media_type="image/png", headers=_tile_headers("FOLLOW"))
         return Response(status_code=204, headers={"X-Cache": "EMPTY"})
 
-    # 리더: 실제 렌더(동기 블로킹 — def 라우트라 스레드풀에서 실행)
+    # leader: do the actual render (synchronous blocking -- runs in the threadpool since it's a def route)
     from .mosaic import render_tile
 
     try:
         png = render_tile(z, x, y, year, bidx, (rmin, rmax))
-    except Exception as e:  # noqa: BLE001 — 개별 타일 실패는 빈 타일로 처리
-        print(f"render_tile 실패 z{z}/{x}/{y}: {e}")
+    except Exception as e:  # noqa: BLE001 -- a single tile failure becomes an empty tile
+        print(f"render_tile failed z{z}/{x}/{y}: {e}")
         png = None
     finally:
         if png is not None:
             TILE_CACHE.put(key, png)
         with _INFLIGHT_LOCK:
             _INFLIGHT.pop(key, None)
-        event.set()  # 대기 중인 팔로워 깨우기
+        event.set()  # wake waiting followers
 
     if png is None:
         return Response(status_code=204, headers={"X-Cache": "EMPTY"})
@@ -150,6 +151,6 @@ def api_tiles(
     bbox: str = Query(..., description="west,south,east,north (WGS84)"),
     year: int = Query(2024, ge=MIN_YEAR, le=MAX_YEAR),
 ) -> list[Tile]:
-    """현재 뷰 bbox와 연도를 덮는 공개 COG 목록을 반환."""
+    """Return the public COGs covering the current view bbox and year."""
     w, s, e, n = (float(x) for x in bbox.split(","))
     return tiles_for_bbox(year, w, s, e, n)

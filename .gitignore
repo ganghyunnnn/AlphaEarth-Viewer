@@ -28,6 +28,6 @@ Thumbs.db
 data/
 tiles_cache/
 
-# 런타임 검증 산출물(루트). docs/screenshot.png 은 커밋 유지
+# Runtime verification artifacts (root). docs/screenshot.png stays committed
 /verification_render.png
 /verification_scrub.png

@@ -15,11 +15,11 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
 
 #map { position: absolute; inset: 0; }
 
-/* 비교 모드: 맵 B는 맵 A 위에 겹쳐 우측만 clip 노출. 평소엔 숨김. */
+/* Compare mode: map B overlays map A, clipped to expose only the right side. Hidden by default. */
 #mapB { position: absolute; inset: 0; z-index: 1; display: none; }
 #mapB.on { display: block; }
 
-/* 분할 경계 + 드래그 핸들 */
+/* Split boundary + drag handle */
 #divider {
   position: absolute; top: 0; bottom: 0; left: 50%; width: 2px;
   margin-left: -1px; background: var(--accent); z-index: 3;
@@ -43,13 +43,13 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
 }
 #topbar .sub { color: var(--muted); font-size: 12px; }
 
-/* 지명/좌표 검색 (상하 화살표 토글 — 접힘 ▾ / 펼침 ▴) */
+/* Place/coordinate search (up-down arrow toggle — collapsed ▾ / expanded ▴) */
 .searchbox { position: relative; display: inline-flex; align-items: center; }
 .searchbox.collapsed .search { display: none; }
-/* 화살표 토글: 접힘 ▾(아래로 펼침) → 펼치면 180° 회전해 ▴(위로 접기) */
+/* Arrow toggle: collapsed ▾ (expand downward) → rotates 180° when expanded to show ▴ (collapse upward) */
 .search-arrow { font-size: 13px; font-weight: 700; line-height: 1; padding: 5px 9px; transition: transform .15s; }
 .searchbox:not(.collapsed) .search-arrow { transform: rotate(180deg); }
-/* 입력창은 토글 아래로 펼쳐지는 드롭다운(absolute) → 상단바 박스 크기 불변 */
+/* Input expands as an absolute dropdown below the toggle → topbar box size stays constant */
 .search { position: absolute; top: calc(100% + 8px); right: 0; z-index: 10; }
 .search input {
   width: 240px; max-width: 70vw;
@@ -79,7 +79,7 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
 .search-item:hover { background: #21262d; }
 .search-msg { padding: 8px 10px; color: var(--muted); font-size: 12px; }
 
-/* 언어 토글(우상단) */
+/* Language toggle (top-right) */
 .lang-toggle {
   position: absolute; top: 12px; right: 12px; z-index: 6;
   background: var(--panel); color: var(--fg);
@@ -89,7 +89,7 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
 }
 .lang-toggle:hover { border-color: var(--accent); }
 
-/* 대비 값: 키보드 입력 가능한 숫자(슬라이더와 양방향 동기화). 스피너 제거. */
+/* Contrast values: keyboard-editable numbers (bidirectionally synced with sliders). Spinner removed. */
 .rangeout {
   width: 92px; flex: none;
   display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px;
@@ -103,7 +103,7 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
 }
 .rnum:focus { outline: none; color: var(--accent); -webkit-text-fill-color: var(--accent); }
 
-/* AlphaEarth 레이어 on/off 토글(투명도 옆) */
+/* AlphaEarth layer on/off toggle (next to opacity slider) */
 .aef-toggle {
   flex: none; background: #21262d; color: var(--fg);
   border: 1px solid #30363d; border-radius: 8px;
@@ -117,7 +117,7 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
 .rnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .rnum { -moz-appearance: textfield; appearance: textfield; }
 
-/* 베이스맵(레이어) 선택 — 우측 플로팅 세로 컨트롤 */
+/* Basemap (layer) selector — right-side floating vertical control */
 .basemap-ctl {
   position: absolute; right: 12px; top: 54px; z-index: 6;
   display: flex; flex-direction: column; gap: 4px;
@@ -140,7 +140,7 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
   backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,.4);
 }
 
-/* 패널 헤더(제목 · 편집대상 탭 · 접기) */
+/* Panel header (title · edit-target tabs · collapse) */
 .panel-head { display: flex; align-items: center; gap: 10px; }
 .panel-head .title { font-weight: 600; font-size: 13px; color: var(--muted); }
 .collapse {
@@ -150,14 +150,14 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
 }
 .collapse:hover { border-color: var(--accent); }
 
-/* 접힘: 본문 숨기고 헤더만 남김 */
+/* Collapsed: hides the body and shows only the header */
 #panel.collapsed .panel-body { display: none; }
 #panel.collapsed { padding: 8px 16px; }
 #panel.collapsed .collapse { transform: rotate(180deg); }
 
 .panel-body { margin-top: 8px; }
 
-/* 편집 대상 A/B 세그먼트 탭 */
+/* Edit-target A/B segment tabs */
 .side-tabs { display: flex; gap: 4px; }
 .side-tabs[hidden] { display: none; }
 .side-tab {
@@ -176,9 +176,9 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
 #scrub { height: 26px; }
 
 .combo { gap: 8px; }
-/* 편집 가능한 밴드 칩: "R A[__]" 형태, 숫자만 입력
-   주의: .bandchip 은 <label> 이라 `.row > label`(muted·width:88px)이 명시도(0,1,1)로
-   먹는다. `.combo .bandchip`(0,2,0)로 색·폭을 확실히 덮어쓴다. */
+/* Editable band chip: "R A[__]" format, numeric input only.
+   Note: .bandchip is a <label>, so `.row > label` (muted · width:88px) wins at specificity (0,1,1).
+   Use `.combo .bandchip` (0,2,0) to reliably override color and width. */
 .combo .bandchip {
   display: inline-flex; align-items: center; gap: 1px;
   width: auto; flex: none;
@@ -195,12 +195,12 @@ html, body { margin: 0; height: 100%; font-family: system-ui, "Segoe UI", sans-s
   font-variant-numeric: tabular-nums;
 }
 .bandnum:focus { outline: none; }
-/* 위아래 스피너 버튼 제거 — 타이핑 입력만 */
+/* Remove up/down spinner buttons — typing input only */
 .bandnum::-webkit-outer-spin-button,
 .bandnum::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .bandnum { -moz-appearance: textfield; appearance: textfield; }
-/* 조합 인덱스(#): muted 색 유지하며 숫자 직접 입력.
-   .idx 도 <label> 이라 `.row > label`(width:88px) 오버라이드 필요 → `.combo .idx`. */
+/* Combo index (#): keeps muted color while allowing direct numeric input.
+   .idx is also a <label>, so `.row > label` (width:88px) must be overridden → `.combo .idx`. */
 .combo .idx {
   margin-left: auto; width: auto; flex: none;
   display: inline-flex; align-items: baseline; cursor: text;

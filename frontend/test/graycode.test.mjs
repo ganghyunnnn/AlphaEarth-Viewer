@@ -1,5 +1,5 @@
-// 의존성 없는 테스트 러너: `node frontend/test/graycode.test.mjs`
-// 실패 시 비0 종료코드.
+// Dependency-free test runner: `node frontend/test/graycode.test.mjs`
+// Exits with a non-zero code on failure.
 import {
   BANDS,
   CHANNELS,
@@ -22,20 +22,20 @@ function check(name, cond) {
   }
 }
 
-// 1) 왕복 변환(round-trip): 모든 인덱스에 대해 tripleToIndex(indexToTriple(i)) === i
+// 1) round-trip: for every index, tripleToIndex(indexToTriple(i)) === i
 {
   let ok = true;
   for (let i = 0; i < TOTAL; i++) {
     if (tripleToIndex(indexToTriple(i)) !== i) {
       ok = false;
-      console.error("    round-trip 실패 @", i, indexToTriple(i));
+      console.error("    round-trip failed @", i, indexToTriple(i));
       break;
     }
   }
-  check("round-trip 변환 (전체 262144개)", ok);
+  check("round-trip conversion (all 262144)", ok);
 }
 
-// 2) 전단사(bijection): 모든 트리플이 정확히 한 번씩 등장
+// 2) bijection: every triple appears exactly once
 {
   const seen = new Uint8Array(TOTAL);
   let ok = true;
@@ -48,20 +48,20 @@ function check(name, cond) {
     const key = (r * BANDS + g) * BANDS + b;
     if (seen[key]) {
       ok = false;
-      console.error("    중복 트리플 @", i, [r, g, b]);
+      console.error("    duplicate triple @", i, [r, g, b]);
       break;
     }
     seen[key] = 1;
   }
-  check("전단사: 모든 (r,g,b) 정확히 1회", ok);
+  check("bijection: every (r,g,b) exactly once", ok);
 }
 
-// 3) 그레이코드 인접성: 연속 인덱스는 정확히 한 채널에서 ±1밴드만 차이
+// 3) gray-code adjacency: consecutive indices differ by ±1 band in exactly one channel
 {
   let ok = true;
   for (let i = 0; i < TOTAL; i++) {
     const a = indexToTriple(i);
-    const b = indexToTriple((i + 1) % TOTAL); // 마지막→처음 래핑은 검사 제외
+    const b = indexToTriple((i + 1) % TOTAL); // skip checking the last->first wrap
     if (i === TOTAL - 1) continue;
     let diffs = 0;
     let maxDelta = 0;
@@ -74,25 +74,25 @@ function check(name, cond) {
     }
     if (diffs !== 1 || maxDelta !== 1) {
       ok = false;
-      console.error("    인접성 위반 @", i, a, "->", b);
+      console.error("    adjacency violation @", i, a, "->", b);
       break;
     }
   }
-  check("인접 프레임: 한 채널 ±1밴드만 변화", ok);
+  check("adjacent frames: only one channel changes by ±1 band", ok);
 }
 
-// 4) 밴드명 / bidx 헬퍼
+// 4) band name / bidx helpers
 check("bandName(0)=A00", bandName(0) === "A00");
 check("bandName(9)=A09", bandName(9) === "A09");
 check("bandName(63)=A63", bandName(63) === "A63");
 check("toBidx(0)=1 (1-indexed)", toBidx(0) === 1);
 check("toBidx(63)=64", toBidx(63) === 64);
 
-// 5) 중복 프레임 판정 + 건너뛰기 스텝
+// 5) degenerate-frame detection + skip step
 check("isDegenerate([5,5,9]) true", isDegenerate([5, 5, 9]) === true);
 check("isDegenerate([1,16,41]) false", isDegenerate([1, 16, 41]) === false);
 {
-  // skipDegenerate 스텝은 항상 비중복 프레임에 도달
+  // skipDegenerate steps always land on a non-degenerate frame
   let ok = true;
   let i = 0;
   for (let n = 0; n < 1000; n++) {
@@ -102,10 +102,10 @@ check("isDegenerate([1,16,41]) false", isDegenerate([1, 16, 41]) === false);
       break;
     }
   }
-  check("step(skipDegenerate) 결과는 항상 비중복", ok);
+  check("step(skipDegenerate) result is always non-degenerate", ok);
 }
 
-// 6) 범위 밖 인덱스 래핑
+// 6) out-of-range index wrapping
 check("indexToTriple(-1) === indexToTriple(TOTAL-1)", JSON.stringify(indexToTriple(-1)) === JSON.stringify(indexToTriple(TOTAL - 1)));
 check("indexToTriple(TOTAL) === indexToTriple(0)", JSON.stringify(indexToTriple(TOTAL)) === JSON.stringify(indexToTriple(0)));
 

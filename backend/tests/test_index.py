@@ -1,4 +1,4 @@
-"""인덱스 질의 검증. 네트워크(원격 parquet) 필요 — 없으면 자동 skip."""
+"""Index-query checks. Needs network (remote parquet) -- auto-skipped without it."""
 
 import pytest
 
@@ -21,7 +21,7 @@ def test_year_bounds():
 
 @pytest.mark.network
 def test_seoul_bbox_returns_cogs():
-    # 서울 주변 작은 bbox, 2024
+    # small bbox around Seoul, 2024
     tiles = tiles_for_bbox(2024, 126.9, 37.5, 127.0, 37.6)
     assert len(tiles) >= 1
     for t in tiles:

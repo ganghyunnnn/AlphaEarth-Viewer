@@ -1,7 +1,7 @@
-"""AlphaEarth COG 공간 인덱스(aef_index.parquet) 질의.
+"""Query the AlphaEarth COG spatial index (aef_index.parquet).
 
-source.coop의 원격 parquet를 DuckDB httpfs로 직접(HTTP range) 질의한다.
-인덱스를 로컬에 둘 필요가 없으며, 연결/extension 로드는 1회만 수행한다.
+Queries source.coop's remote parquet directly (HTTP range) via DuckDB httpfs.
+No need to keep the index locally; the connection/extension load happens once.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from pydantic import BaseModel
 AEF_BASE_URL = "https://data.source.coop/tge-labs/aef/v1/annual"
 AEF_INDEX_URL = f"{AEF_BASE_URL}/aef_index.parquet"
 
-# COG URL 변환용 (s3 -> https)
+# For COG URL rewriting (s3 -> https)
 _S3_PREFIX = "s3://us-west-2.opendata.source.coop"
 _HTTPS_PREFIX = "https://data.source.coop"
 
@@ -24,17 +24,19 @@ MIN_YEAR, MAX_YEAR = 2017, 2025
 
 _conn: duckdb.DuckDBPyConnection | None = None
 _lock = threading.Lock()
-# DuckDB 단일 연결은 동시 .execute()에 안전하지 않다(결과셋이 서로 덮여 빈 결과
-# 반환 → cogs=0 → 빈 타일). 질의는 인메모리 테이블이라 ~10ms이므로 직렬화해도
-# 무해(병목은 네트워크 타일 읽기). 모든 질의를 이 락으로 보호한다.
+# A single DuckDB connection is not safe for concurrent .execute() calls (result sets
+# overwrite each other -> empty result -> cogs=0 -> empty tile). Queries hit an in-memory
+# table (~10ms), so serializing them is harmless (the bottleneck is network tile reads).
+# All queries are guarded by this lock.
 _query_lock = threading.Lock()
 
 
 def _connection() -> duckdb.DuckDBPyConnection:
-    """필요한 컬럼만 로컬 테이블로 1회 적재한 단일 연결(스레드 세이프).
+    """A single connection that loads only the needed columns once into a local table (thread-safe).
 
-    원격 parquet를 매 질의 스캔하면 콜드 지연이 ~5s에 달한다. 시작 시
-    필요한 컬럼(~302k행)만 메모리 테이블로 적재(≈4s)하면 이후 bbox 질의가 ~10ms.
+    Scanning the remote parquet on every query costs ~5s cold. Loading just the needed
+    columns (~302k rows) into an in-memory table at startup (~4s) makes subsequent bbox
+    queries ~10ms.
     """
     global _conn
     if _conn is None:
@@ -55,17 +57,17 @@ def _connection() -> duckdb.DuckDBPyConnection:
 
 
 def warmup() -> int:
-    """인덱스 테이블을 미리 적재(앱 startup에서 호출). 행 수 반환."""
+    """Preload the index table (call from app startup). Returns the row count."""
     return _connection().execute("SELECT count(*) FROM aef_index").fetchone()[0]
 
 
 def to_https(path: str) -> str:
-    """인덱스의 s3:// path를 공개 https COG URL로 변환."""
+    """Rewrite the index's s3:// path to a public https COG URL."""
     return path.replace(_S3_PREFIX, _HTTPS_PREFIX)
 
 
 class Tile(BaseModel):
-    path: str  # 공개 https COG URL
+    path: str  # public https COG URL
     utm_zone: str
     crs: str
     bbox: List[float]  # [west, south, east, north] (WGS84)
@@ -73,7 +75,7 @@ class Tile(BaseModel):
 
 @lru_cache(maxsize=512)
 def _query(year: int, west: float, south: float, east: float, north: float) -> tuple:
-    """bbox(WGS84) + year로 교차하는 COG 행을 질의. 결과는 캐시."""
+    """Query COG rows intersecting bbox (WGS84) + year. Result is cached."""
     sql = """
         SELECT path, utm_zone, crs,
                wgs84_west, wgs84_south, wgs84_east, wgs84_north
@@ -91,7 +93,7 @@ def _query(year: int, west: float, south: float, east: float, north: float) -> t
 def tiles_for_bbox(
     year: int, west: float, south: float, east: float, north: float
 ) -> List[Tile]:
-    """주어진 bbox/연도를 덮는 COG 타일 목록."""
+    """List of COG tiles covering the given bbox/year."""
     if not (MIN_YEAR <= year <= MAX_YEAR):
         raise ValueError(f"year must be in [{MIN_YEAR}, {MAX_YEAR}]")
     out: List[Tile] = []

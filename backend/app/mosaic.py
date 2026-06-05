@@ -1,18 +1,19 @@
-"""인덱스 기반 동적 모자이크 타일 렌더링.
+"""Index-based dynamic mosaic tile rendering.
 
-거대한 MosaicJSON을 사전 빌드하지 않고, 타일마다 공간 인덱스(DuckDB)로 교차 COG를
-찾아 즉석 병합한다. 우리 인덱스 질의가 ~10ms라 가능. 프론트는 단일 소스
-(/api/mosaic/tiles)만 쓰므로 전 지구 줌이 매끄럽다.
+Instead of pre-building a giant MosaicJSON, find the intersecting COGs per tile via the
+spatial index (DuckDB) and merge them on the fly. Feasible because our index query is ~10ms.
+The frontend uses a single source (/api/mosaic/tiles), so global zoom is seamless.
 
-성능 전략(실측으로 확정):
-  1) WarpedVRT 회피 — rio_tiler.Reader.tile()은 COG마다 WarpedVRT(UTM→3857)를 만들어
-     콜드 z11 타일 한 장이 ~19s. "네이티브 오버뷰에서 타일 윈도우만 데시메이트 읽기 →
-     메모리 reproject"가 ~5s로 ~4배 빠르다(재투영 연산 0.006s, 비용은 네트워크 read).
-     CPU 스레드 증설은 오히려 악화(네트워크 병목) → software-only 경로가 최적.
-  2) 밴드-타일 캐시(핵심) — 병목은 원격 COG 오버뷰 블록 HTTP fetch(대역폭 한계 ~3.4MB/s).
-     그레이코드 스크럽은 한 스텝에 3밴드 중 1밴드만 바뀐다. 밴드별로 따로 읽어
-     (cog,band,z,x,y)로 캐시하면 스텝당 2밴드는 HIT·1밴드만 fetch → 스크럽 비용 ~3× 절감.
-     첫 렌더는 미캐시 밴드를 한 번의 ds.read로 묶어 읽어 개별 open 비용을 피한다.
+Performance strategy (settled by measurement):
+  1) Avoid WarpedVRT — rio_tiler.Reader.tile() builds a WarpedVRT (UTM->3857) per COG, so a
+     cold z11 tile takes ~19s. "Decimated window read from the native overview -> in-memory
+     reproject" is ~5s (~4x faster; reprojection is 0.006s, the cost is the network read).
+     Adding CPU threads makes it worse (network-bound) -> a software-only path is optimal.
+  2) Band-tile cache (key) — the bottleneck is the remote COG overview-block HTTP fetch
+     (bandwidth-limited ~3.4MB/s). A gray-code scrub step changes only 1 of the 3 bands.
+     Reading per band and caching by (cog,band,z,x,y) means 2 bands HIT and only 1 is fetched
+     per step -> ~3x cheaper scrub. The first render reads the uncached bands in one ds.read
+     to avoid per-band open cost.
 """
 
 from __future__ import annotations
@@ -37,19 +38,19 @@ from .index import tiles_for_bbox
 TMS = morecantile.tms.get("WebMercatorQuad")
 DST_CRS = CRS.from_epsg(3857)
 TILESIZE = 256
-NODATA = -128  # AEF int8 nodata (정상 데이터는 이 값을 갖지 않음)
+NODATA = -128  # AEF int8 nodata (valid data never takes this value)
 
-# 저줌(넓은 타일)에서 수백~수천 COG를 모자이크하면 매우 느려진다.
-# 한 타일이 이보다 많은 COG를 덮으면 빈 타일 처리(프론트는 minzoom으로 저줌 차단).
+# Mosaicking hundreds~thousands of COGs at low (wide) zooms is very slow.
+# If a tile covers more COGs than this, return an empty tile (the frontend blocks low zoom via minzoom).
 MAX_COGS_PER_TILE = 24
 
-# --- 밴드-타일 메모리 캐시 -------------------------------------------------
-# key=(cog_url, band, z, x, y) → 256² int8 배열(재투영 완료) | None(교차 안 함)
-# 유효 마스크는 arr != NODATA로 유도(별도 저장 안 함 → 64KB/엔트리).
+# --- band-tile memory cache ------------------------------------------------
+# key=(cog_url, band, z, x, y) -> 256^2 int8 array (reprojected) | None (no intersection)
+# The valid mask is derived from arr != NODATA (not stored separately -> 64KB/entry).
 _BAND_CACHE: "OrderedDict[tuple, Optional[np.ndarray]]" = OrderedDict()
-_BAND_CACHE_MAX = 3000  # ≈192MB
+_BAND_CACHE_MAX = 3000  # ~=192MB
 _BAND_LOCK = threading.Lock()
-_MISS = object()  # 캐시 미존재 표식
+_MISS = object()  # cache-miss sentinel
 
 
 def _cache_get(key: tuple):
@@ -69,7 +70,7 @@ def _cache_put(key: tuple, val: Optional[np.ndarray]) -> None:
 
 
 def _tile_window(ds, t_w, t_s, t_e, t_n) -> Optional[Window]:
-    """타일의 소스 CRS 경계로 읽기 윈도우 계산. 교차 안 하면 None."""
+    """Compute the read window from the tile's source-CRS bounds. None if no intersection."""
     db = ds.bounds
     d_w, d_e = min(db.left, db.right), max(db.left, db.right)
     d_s, d_n = min(db.bottom, db.top), max(db.bottom, db.top)
@@ -84,10 +85,10 @@ def _tile_window(ds, t_w, t_s, t_e, t_n) -> Optional[Window]:
 def _read_bands(
     asset: str, bands: Sequence[int], x: int, y: int, z: int
 ) -> Optional[Dict[int, np.ndarray]]:
-    """COG에서 여러 밴드를 한 번에 네이티브 오버뷰로 읽어 3857로 재투영.
+    """Read several bands at once from the COG's native overview and reproject to 3857.
 
-    반환: {band: 256² int8 배열}. 타일과 교차하지 않으면 None.
-    네트워크 비용을 한 번의 ds.read로 묶기 위해 여러 밴드를 동시에 처리.
+    Returns: {band: 256^2 int8 array}. None if it doesn't intersect the tile.
+    Reads multiple bands together to bundle the network cost into one ds.read.
     """
     tile = morecantile.commons.Tile(x, y, z)
     xb = TMS.xy_bounds(tile)  # 3857
@@ -108,7 +109,7 @@ def _read_bands(
             boundless=True,
             fill_value=NODATA,
         )
-        # 데시메이트된 256² 배열의 변환: window_transform을 배율 스케일(부호·방향 보존).
+        # Transform of the decimated 256^2 array: scale window_transform (preserves sign/direction).
         wt = ds.window_transform(win)
         src_t = wt * Affine.scale(win.width / TILESIZE, win.height / TILESIZE)
         src_crs = ds.crs
@@ -126,7 +127,7 @@ def _read_bands(
 
 
 def cogs_for_tile(z: int, x: int, y: int, year: int) -> List[str]:
-    """해당 웹머케이터 타일을 덮는 COG URL 목록(인덱스 질의)."""
+    """List of COG URLs covering the given Web Mercator tile (index query)."""
     bb = TMS.bounds(morecantile.commons.Tile(x, y, z))  # WGS84 (left,bottom,right,top)
     return [t.path for t in tiles_for_bbox(year, bb.left, bb.bottom, bb.right, bb.top)]
 
@@ -139,16 +140,16 @@ def render_tile(
     indexes: Sequence[int],
     rescale: Tuple[float, float],
 ) -> Optional[bytes]:
-    """RGB PNG 타일을 렌더. 덮는 COG가 없으면 None(빈 타일).
+    """Render an RGB PNG tile. None (empty tile) if no COG covers it.
 
-    밴드별로 (cog,band,z,x,y) 캐시를 조회하고, 미캐시 밴드만 COG에서 읽는다.
-    여러 COG가 한 타일을 덮으면 밴드별로 first-valid 합성(모자이크).
+    Looks up the (cog,band,z,x,y) cache per band and reads only the uncached bands.
+    When several COGs cover one tile, composite per band as first-valid (mosaic).
     """
     cogs = cogs_for_tile(z, x, y, year)
     if not cogs or len(cogs) > MAX_COGS_PER_TILE:
         return None
 
-    uniq = list(dict.fromkeys(indexes))  # 중복 밴드 제거(채널이 같은 밴드 공유 가능)
+    uniq = list(dict.fromkeys(indexes))  # dedupe bands (channels may share a band)
     composited: Dict[int, np.ndarray] = {b: np.full((TILESIZE, TILESIZE), NODATA, np.int8) for b in uniq}
     covered: Dict[int, np.ndarray] = {b: np.zeros((TILESIZE, TILESIZE), bool) for b in uniq}
 
@@ -157,7 +158,7 @@ def render_tile(
         if not pending:
             break
 
-        # 캐시 조회 → 미스 밴드만 한 번에 읽기
+        # Cache lookup -> read only the missing bands in one go
         avail: Dict[int, Optional[np.ndarray]] = {}
         miss: List[int] = []
         for b in pending:
@@ -165,7 +166,7 @@ def render_tile(
             if v is _MISS:
                 miss.append(b)
             else:
-                avail[b] = v  # ndarray or None(교차 안 함)
+                avail[b] = v  # ndarray or None (no intersection)
         if miss:
             read = _read_bands(cog, miss, x, y, z)
             for b in miss:
@@ -173,7 +174,7 @@ def render_tile(
                 _cache_put((cog, b, z, x, y), arr)
                 avail[b] = arr
 
-        # 밴드별 first-valid 합성
+        # First-valid composite per band
         for b in pending:
             arr = avail.get(b)
             if arr is None:
@@ -186,7 +187,7 @@ def render_tile(
     if not any(covered[b].any() for b in uniq):
         return None
 
-    stack = np.stack([composited[b] for b in indexes])  # (nb, 256, 256) — indexes 순서
+    stack = np.stack([composited[b] for b in indexes])  # (nb, 256, 256) -- in `indexes` order
     mask2d = np.all(stack == NODATA, axis=0)
     arr = np.ma.MaskedArray(stack, mask=np.broadcast_to(mask2d, stack.shape))
 

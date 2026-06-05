@@ -1,4 +1,4 @@
-# FastAPI 앱 + TiTiler 동적 타일 + DuckDB 원격 인덱스 질의
+# FastAPI app + TiTiler dynamic tiles + DuckDB remote index queries
 fastapi>=0.115
 uvicorn[standard]>=0.30
 titiler.core>=0.18

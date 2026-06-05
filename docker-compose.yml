@@ -1,5 +1,5 @@
-# 한 줄 실행:  docker compose up --build
-# 브라우저:    http://localhost:8080
+# One-line run:  docker compose up --build
+# Browser:       http://localhost:8080
 services:
   backend:
     build: ./backend

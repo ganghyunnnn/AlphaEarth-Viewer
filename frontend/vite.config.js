@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 
-// 개발 중 백엔드(/api, /cog, /mosaicjson)를 8000 포트로 프록시
+// In dev, proxy the backend (/api, /cog, /mosaicjson) to port 8000
 export default defineConfig({
   server: {
     proxy: {

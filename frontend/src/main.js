@@ -12,19 +12,19 @@ const $ = (id) => document.getElementById(id);
 
 const state = readState();
 
-// --- 지도 뷰어(맵 A) ----------------------------------------------------
+// --- Map viewer (map A) -------------------------------------------------
 const viewer = new Viewer("map", state);
 
-// --- 비교 모드(스와이프) 컨트롤러 --------------------------------------
+// --- Compare mode (swipe) controller -----------------------------------
 const compare = new CompareController({
   mapA: viewer.map,
   containerB: $("mapB"),
   divider: $("divider"),
 });
 
-// --- 분할면 A/B 파라미터 -----------------------------------------------
-// A는 최상위 state(year/scrub/min/max)를 그대로 사용(permalink 호환).
-// B는 state.b* 필드로 프록시한다. 두 측 모두 {year,scrub,min,max} 인터페이스.
+// --- Side A/B parameters -----------------------------------------------
+// A uses the top-level state (year/scrub/min/max) as-is (permalink compatible).
+// B is proxied via state.b* fields. Both sides share the {year,scrub,min,max} interface.
 const B = {
   get year() { return state.bYear; }, set year(v) { state.bYear = v; },
   get scrub() { return state.bScrub; }, set scrub(v) { state.bScrub = v; },
@@ -32,10 +32,10 @@ const B = {
   get max() { return state.bMax; }, set max(v) { state.bMax = v; },
 };
 const sideParams = { A: state, B };
-let activeSide = "A"; // 패널이 편집하는 분할면
-let bSeeded = !!state.compare; // permalink로 B 값이 들어왔으면 A 복제 생략
+let activeSide = "A"; // the side currently being edited in the panel
+let bSeeded = !!state.compare; // skip cloning A to B if B values were restored from permalink
 
-// --- 유휴 예측 프리페치(맵 A 기준) -------------------------------------
+// --- Idle-prediction prefetch (based on map A) -------------------------
 const prefetcher = new Prefetcher(viewer.map);
 function pfCtx() {
   return {
@@ -50,7 +50,7 @@ function pfSettle() {
   prefetcher.schedule();
 }
 
-// --- 활성 분할면 렌더(드래그=프리뷰 디바운스, 손 뗌=즉시 풀해상도) ------
+// --- Active side render (drag = debounced preview, release = immediate full-res) ------
 let renderTimer = null;
 function renderActive(commit) {
   const p = sideParams[activeSide];
@@ -65,7 +65,7 @@ function renderActive(commit) {
   else renderTimer = setTimeout(doIt, 150);
 }
 
-// --- 스크럽 바 ----------------------------------------------------------
+// --- Scrub bar ----------------------------------------------------------
 const scrub = new ScrubControl(
   {
     scrub: $("scrub"),
@@ -83,15 +83,15 @@ const scrub = new ScrubControl(
   {
     onChange: (index, _triple, { commit }) => {
       sideParams[activeSide].scrub = index;
-      if (activeSide === "A") prefetcher.cancel(); // 스크럽 중 프리페치 중단(대역폭 양보)
+      if (activeSide === "A") prefetcher.cancel(); // cancel prefetch during scrub (yield bandwidth)
       renderActive(commit);
       if (commit) pushState(state);
     },
-    makePreviewUrl: () => null, // TODO: TiTiler /cog/preview 기반 썸네일
+    makePreviewUrl: () => null, // TODO: thumbnail based on TiTiler /cog/preview
   },
 );
 
-// --- 연도 슬라이더 ------------------------------------------------------
+// --- Year slider --------------------------------------------------------
 $("year").value = String(state.year);
 $("yearOut").textContent = String(state.year);
 $("year").addEventListener("input", () => {
@@ -107,10 +107,10 @@ $("year").addEventListener("input", () => {
   pushState(state);
 });
 
-// --- 대비(min/max): 슬라이더 + 키보드 숫자 입력(양방향 동기화) -----------
+// --- Contrast (min/max): slider + numeric keyboard input (two-way sync) -----------
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-// 현재 측 값으로 슬라이더·숫자입력 4개를 모두 맞춘다.
+// Sync all 4 slider/number inputs to the current side's values.
 function setRangeUI(p) {
   $("rmin").value = String(p.min);
   $("rmax").value = String(p.max);
@@ -119,12 +119,12 @@ function setRangeUI(p) {
 }
 
 function commitRange(commit) {
-  if (activeSide === "A") prefetcher.cancel(); // 대비 조정 중 프리페치 중단
-  renderActive(true); // 대비는 즉시 반영(라이브)
+  if (activeSide === "A") prefetcher.cancel(); // cancel prefetch during contrast adjustment
+  renderActive(true); // contrast is applied immediately (live)
   if (commit) pushState(state);
 }
 
-// 슬라이더 드래그 → 값(드래그=프리뷰, 손 뗌=커밋).
+// Slider drag → value update (dragging = preview, release = commit).
 function onRangeSlider(commit) {
   const p = sideParams[activeSide];
   p.min = Number($("rmin").value);
@@ -134,7 +134,7 @@ function onRangeSlider(commit) {
   commitRange(commit);
 }
 
-// 숫자 직접 입력 → 슬라이더 도메인으로 클램프 후 반영. change(Enter/blur)에서만.
+// Direct numeric input → clamped to slider domain and applied. Only on change (Enter/blur).
 function onRangeNum() {
   const p = sideParams[activeSide];
   const mn = Number($("rminNum").value);
@@ -154,8 +154,8 @@ $("rmax").addEventListener("change", () => onRangeSlider(true));
 $("rminNum").addEventListener("change", onRangeNum);
 $("rmaxNum").addEventListener("change", onRangeNum);
 
-// --- 편집 대상(A/B) 전환 ------------------------------------------------
-// 선택한 측의 저장값을 컨트롤에 되불러온다(렌더는 이미 돼 있으므로 silent).
+// --- Switch active edit side (A/B) -------------------------------------
+// Restores the selected side's saved values into the controls (render is already applied, so silent).
 function setActiveSide(side) {
   activeSide = side;
   $("tabA").classList.toggle("on", side === "A");
@@ -169,15 +169,15 @@ function setActiveSide(side) {
 $("tabA").addEventListener("click", () => setActiveSide("A"));
 $("tabB").addEventListener("click", () => setActiveSide("B"));
 
-// --- 비교 모드 토글 -----------------------------------------------------
+// --- Compare mode toggle ------------------------------------------------
 function setCompare(on) {
   state.compare = on ? 1 : 0;
   document.body.classList.toggle("compare-on", on);
   $("compare").classList.toggle("on", on);
   $("sideTabs").hidden = !on;
   if (on) {
-    // 켜는 순간 B를 현재 A로 복제(같은 화면에서 시작 → 한쪽만 바꿔 비교).
-    // 단, permalink로 B 값이 복원된 경우엔 유지.
+    // On enable, clone current A into B (start from the same view → change one side to compare).
+    // Skip if B values were already restored from a permalink.
     if (!bSeeded) {
       B.year = state.year;
       B.scrub = state.scrub;
@@ -187,14 +187,14 @@ function setCompare(on) {
     }
     compare.enable({ year: B.year, triple: indexToTriple(B.scrub), range: { min: B.min, max: B.max } });
     compare.setSwipe(state.swipe);
-    // 켤 때 B를 현재 전역 뷰 설정(베이스맵/투명도/레이어 on·off)과 명시적으로 일치시킨다.
+    // On enable, explicitly sync B with the current global view settings (basemap/opacity/layer on/off).
     const bm = BASEMAPS[currentBasemap];
     compare.setBasemapTiles(bm.tiles, bm.attribution);
     compare.setOpacity(currentOpacity);
     compare.setVisible(aefOn);
   } else {
     compare.disable();
-    setActiveSide("A"); // 단일 뷰 → A 편집으로 복귀
+    setActiveSide("A"); // single view → return to editing A
   }
   pushState(state);
 }
@@ -204,25 +204,25 @@ compare.onSwipeEnd = (t) => {
   pushState(state);
 };
 
-// --- 패널 접기/펼치기 ---------------------------------------------------
+// --- Panel collapse/expand ----------------------------------------------
 $("collapse").addEventListener("click", () => {
   const collapsed = $("panel").classList.toggle("collapsed");
   $("collapse").setAttribute("aria-expanded", String(!collapsed));
 });
 
-// --- 공유 버튼 ----------------------------------------------------------
+// --- Share button -------------------------------------------------------
 $("share").addEventListener("click", async () => {
   const url = shareUrl(state);
   try {
     await navigator.clipboard.writeText(url);
     flash($("share"), t("copied"));
   } catch {
-    prompt("공유 URL", url);
+    prompt("Share URL", url);
   }
 });
 
-// --- 지도 이동 → 상태 갱신 ---------------------------------------------
-viewer.onMoveStart = () => prefetcher.cancel(); // 팬/줌 시작 → 프리페치 중단
+// --- Map move → state update -------------------------------------------
+viewer.onMoveStart = () => prefetcher.cancel(); // pan/zoom start → cancel prefetch
 viewer.onMove = ({ lng, lat, zoom }) => {
   state.lng = lng;
   state.lat = lat;
@@ -230,30 +230,30 @@ viewer.onMove = ({ lng, lat, zoom }) => {
   pushState(state);
 };
 
-// idle = 보이는 타일 로드 완료 → 그때 비로소 이웃·마진 프리페치(콜드 로드와 비경쟁).
+// idle = visible tiles fully loaded → only then run neighbor/margin prefetch (no competition with cold loads).
 viewer.onIdle = () => pfSettle();
 
-// --- 초기화 -------------------------------------------------------------
+// --- Initialization -----------------------------------------------------
 viewer.whenReady(() => {
-  scrub.init(state.scrub); // triple 확정 → onChange → viewer.setRender → 모자이크 소스 생성
-  setBasemap(currentBasemap); // 저장된 베이스맵 복원(다크 외일 때 base 타일 교체)
-  setOpacity(currentOpacity, false); // 저장된 투명도 적용(레이어 생성 후)
-  setAefOn(aefOn, false); // 저장된 레이어 on/off 적용
-  if (state.compare) setCompare(true); // permalink 복원
+  scrub.init(state.scrub); // resolve triple → onChange → viewer.setRender → create mosaic source
+  setBasemap(currentBasemap); // restore saved basemap (swap base tiles if not dark)
+  setOpacity(currentOpacity, false); // apply saved opacity (after layer is created)
+  setAefOn(aefOn, false); // apply saved layer on/off state
+  if (state.compare) setCompare(true); // restore from permalink
 });
 
-// --- 다국어(i18n) + 언어 토글 -------------------------------------------
-applyI18n(); // 정적 텍스트(data-i18n) 적용
+// --- i18n + language toggle ---------------------------------------------
+applyI18n(); // apply static text (data-i18n attributes)
 function syncLangUI() {
   document.title = t("appTitle");
-  // 토글 버튼은 '전환 대상' 언어를 표시
+  // toggle button shows the language to switch to
   $("langToggle").textContent = getLang() === "en" ? "한국어" : "EN";
 }
 syncLangUI();
 onLangChange(syncLangUI);
 $("langToggle").addEventListener("click", () => setLang(getLang() === "en" ? "ko" : "en"));
 
-// --- 지명/좌표 검색 + 접기 토글 ----------------------------------------
+// --- Place/coordinate search + collapse toggle -------------------------
 new SearchControl({
   form: $("searchForm"),
   input: $("searchInput"),
@@ -265,7 +265,7 @@ $("searchToggle").addEventListener("click", () => {
   if (!collapsed) $("searchInput").focus();
 });
 
-// --- 베이스맵 전환(다크/위성/OSM) — 전역 뷰 설정, 맵 A·B 동시 적용 -------
+// --- Basemap switch (dark/satellite/OSM) — global view setting, applied to both map A and B -------
 let currentBasemap = localStorage.getItem("aef_basemap") || DEFAULT_BASEMAP;
 if (!BASEMAPS[currentBasemap]) currentBasemap = "dark";
 function setBasemap(key) {
@@ -274,7 +274,7 @@ function setBasemap(key) {
   try {
     localStorage.setItem("aef_basemap", key);
   } catch {
-    /* private mode 등 — 무시 */
+    /* private mode etc. — ignore */
   }
   const { tiles, attribution } = BASEMAPS[key];
   viewer.setBasemapTiles(tiles, attribution);
@@ -287,7 +287,7 @@ document
   .querySelectorAll("#basemapTabs .seg-btn")
   .forEach((b) => b.addEventListener("click", () => setBasemap(b.dataset.bm)));
 
-// --- AlphaEarth 레이어 투명도 — 전역 뷰 설정, 맵 A·B 동시 적용 ----------
+// --- AlphaEarth layer opacity — global view setting, applied to both map A and B ----------
 let currentOpacity = parseFloat(localStorage.getItem("aef_opacity"));
 if (Number.isNaN(currentOpacity)) currentOpacity = 1;
 function setOpacity(v, commit) {
@@ -299,7 +299,7 @@ function setOpacity(v, commit) {
     try {
       localStorage.setItem("aef_opacity", String(v));
     } catch {
-      /* private mode 등 — 무시 */
+      /* private mode etc. — ignore */
     }
   }
 }
@@ -308,7 +308,7 @@ $("opacityOut").textContent = Math.round(currentOpacity * 100) + "%";
 $("opacity").addEventListener("input", () => setOpacity(Number($("opacity").value), false));
 $("opacity").addEventListener("change", () => setOpacity(Number($("opacity").value), true));
 
-// --- AlphaEarth 레이어 on/off — 끄면 레이어 숨김(타일 요청도 중단) -------
+// --- AlphaEarth layer on/off — hide layer when off (tile requests also stop) -------
 let aefOn = localStorage.getItem("aef_on");
 aefOn = aefOn === null ? true : aefOn === "1";
 function setAefOn(on, commit) {
@@ -319,12 +319,12 @@ function setAefOn(on, commit) {
   btn.classList.toggle("on", on);
   btn.setAttribute("aria-pressed", String(on));
   btn.textContent = on ? "ON" : "OFF";
-  $("opacity").disabled = !on; // 꺼진 상태에선 투명도 슬라이더 비활성
+  $("opacity").disabled = !on; // disable opacity slider when layer is off
   if (commit) {
     try {
       localStorage.setItem("aef_on", on ? "1" : "0");
     } catch {
-      /* private mode 등 — 무시 */
+      /* private mode etc. — ignore */
     }
   }
 }
@@ -336,4 +336,4 @@ function flash(btn, text) {
   setTimeout(() => (btn.textContent = old), 1200);
 }
 
-console.log(`AlphaEarth Viewer 준비. 총 조합 ${TOTAL.toLocaleString()}개.`);
+console.log(`AlphaEarth Viewer ready. Total combinations: ${TOTAL.toLocaleString()}.`);

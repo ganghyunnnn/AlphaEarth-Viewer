@@ -1,7 +1,7 @@
-# 모든 텍스트 파일은 저장소에서 LF로 정규화
+# Normalize all text files to LF in the repo
 * text=auto eol=lf
 
-# 바이너리
+# Binary
 *.png binary
 *.tiff binary
 *.parquet binary

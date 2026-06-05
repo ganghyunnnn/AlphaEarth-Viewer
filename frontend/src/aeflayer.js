@@ -1,13 +1,13 @@
-// 맵 인스턴스에 AlphaEarth 동적 모자이크 raster 레이어를 얹는 공유 헬퍼.
-// 단일 뷰어(viewer.js)와 비교 모드의 B 맵(compare.js)이 같은 로직을 공유한다.
+// Shared helper for attaching the AlphaEarth dynamic mosaic raster layer to a map instance.
+// Used by both the single viewer (viewer.js) and the compare-mode B map (compare.js).
 import { mosaicTileUrl } from "./titiler.js";
 
 export const AEF_SRC = "aef";
-// COG가 10m라 z14~15가 native. 저줌은 타일당 COG 수 폭증 → minzoom으로 차단.
+// COG resolution is 10 m, so z14–15 is native. At low zoom, COG count per tile explodes → blocked by minzoom.
 export const AEF_MINZOOM = 7;
 export const AEF_MAXZOOM = 15;
 
-// 빈 스타일(베이스맵만). 맵 A/B 공통.
+// Minimal style (basemap only). Shared by map A and B.
 export function baseStyle(basemapTiles) {
   return {
     version: 8,
@@ -18,12 +18,12 @@ export function baseStyle(basemapTiles) {
   };
 }
 
-// 스타일이 소스/레이어 조작 가능한 상태가 되면 fn 실행.
-// 주의: once("load")는 최초 1회뿐이라, 로드 후 호출 시 콜백이 영영 안 불린다.
-// isStyleLoaded()도 소스 로딩 중 false가 될 수 있으므로 styledata로 준비될 때까지 폴링.
+// Execute fn once the style is ready for source/layer manipulation.
+// Note: once("load") fires only once, so calling after load means the callback never fires.
+// isStyleLoaded() can also return false while sources are loading, so poll via styledata until ready.
 export function whenStyleReady(map, fn) {
-  // styledata 이벤트는 로딩 중(isStyleLoaded=false)에만 발생하고 최종 준비 순간엔
-  // 다시 안 뜨는 경우가 있어 콜백을 놓친다. 짧은 타이머 폴링으로 확실히 잡는다.
+  // The styledata event fires only while isStyleLoaded=false, and may not fire at the final
+  // ready moment, causing the callback to be missed. Use short-interval polling to catch it reliably.
   if (map.isStyleLoaded()) {
     fn();
     return;
@@ -35,10 +35,11 @@ export function whenStyleReady(map, fn) {
   }, 50);
 }
 
-// 베이스맵 전환: base 소스/레이어를 재생성해 확실히 새 타일을 로드한다.
-// (RasterTileSource.setTiles는 브라우저에 따라 이미 로드된 타일을 즉시 새로고침하지
-//  않아 A/B가 서로 다른 베이스맵으로 보일 수 있다. 맵 A·B가 같은 헬퍼를 쓰므로 항상 일치.)
-// base 레이어는 항상 aef 레이어 아래에 재삽입한다.
+// Basemap switch: recreate the base source/layer to ensure new tiles are loaded.
+// (RasterTileSource.setTiles may not immediately refresh already-loaded tiles in all browsers,
+//  which can cause A and B to show different basemaps. Using the same helper for both maps A and B
+//  keeps them always in sync.)
+// The base layer is always re-inserted below the aef layer.
 export function setBasemap(map, tiles, attribution = "") {
   const run = () => {
     if (map.getLayer("base")) map.removeLayer("base");
@@ -52,7 +53,7 @@ export function setBasemap(map, tiles, attribution = "") {
   whenStyleReady(map, run);
 }
 
-// 맵에 AEF 소스/레이어를 적용(없으면 생성, 있으면 타일 URL만 교체).
+// Apply the AEF source/layer to the map (create if absent, otherwise swap tile URL only).
 //   render = {year, triple, range:{min,max}}
 export function applyAef(map, render) {
   const { year, triple, range } = render;
@@ -60,7 +61,7 @@ export function applyAef(map, render) {
   const url = mosaicTileUrl(year, triple, range);
   const src = map.getSource(AEF_SRC);
   if (src) {
-    src.setTiles([url]); // 밴드/연도/대비 변경 — URL만 교체
+    src.setTiles([url]); // band/year/contrast change — swap URL only
     return;
   }
   map.addSource(AEF_SRC, {

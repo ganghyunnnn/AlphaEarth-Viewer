@@ -8,16 +8,16 @@
   </head>
   <body>
     <div id="map"></div>
-    <!-- 비교 모드 전용: 맵 A 위에 겹쳐지는 두 번째 맵(우측 노출, clip-path로 분할) -->
+    <!-- Compare mode only: second map overlaid on map A (right side exposed, split via clip-path) -->
     <div id="mapB"></div>
 
-    <!-- 분할 경계 + 드래그 핸들 (비교 모드에서만 표시) -->
+    <!-- Split boundary + drag handle (visible in compare mode only) -->
     <div id="divider"><div class="grip">⇆</div></div>
 
     <header id="topbar">
       <strong data-i18n="appTitle">AlphaEarth Viewer</strong>
       <span class="sub" data-i18n="appSub">64 bands → RGB · gray-code scrub</span>
-      <!-- 지명/좌표 검색(접기 가능: 🔍 토글로 입력창 펼침) -->
+      <!-- Place/coordinate search (collapsible: toggle 🔍 to expand the input) -->
       <div id="searchBox" class="searchbox collapsed">
         <button type="button" id="searchToggle" class="search-btn search-arrow" data-i18n-title="searchTitle" title="Search">▾</button>
         <form id="searchForm" class="search" autocomplete="off">
@@ -28,10 +28,10 @@
       </div>
     </header>
 
-    <!-- 언어 토글(EN ↔ 한국어) -->
+    <!-- Language toggle (EN ↔ Korean) -->
     <button id="langToggle" class="lang-toggle" title="Language">한국어</button>
 
-    <!-- 베이스맵(레이어) 선택 — 우측 플로팅 -->
+    <!-- Basemap (layer) selector — right-side floating -->
     <div id="basemapTabs" class="basemap-ctl">
       <span class="basemap-cap" data-i18n="basemap">Basemap</span>
       <button type="button" class="seg-btn" data-bm="dark" data-i18n="bmDark">Dark</button>
@@ -42,7 +42,7 @@
     <section id="panel">
       <div class="panel-head">
         <span class="title" data-i18n="panelTitle">Controls</span>
-        <!-- 편집 대상 선택(비교 모드에서만 표시) -->
+        <!-- Edit-target selector (visible in compare mode only) -->
         <div id="sideTabs" class="side-tabs" hidden>
           <button id="tabA" class="side-tab a on" data-side="A">A</button>
           <button id="tabB" class="side-tab b" data-side="B">B</button>

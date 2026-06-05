@@ -1,6 +1,6 @@
-// 경량 i18n. 기본 영어, localStorage에 선택 언어 저장.
-// 정적 텍스트는 HTML의 data-i18n / data-i18n-title / data-i18n-ph 속성으로,
-// 동적 텍스트는 t(key)로 처리한다. setLang() 시 applyI18n() + 구독자 통지.
+// Lightweight i18n. Defaults to English; stores the selected language in localStorage.
+// Static text is handled via HTML data-i18n / data-i18n-title / data-i18n-ph attributes;
+// dynamic text uses t(key). Calling setLang() triggers applyI18n() and notifies subscribers.
 
 const STORE = "aef_lang";
 
@@ -89,20 +89,20 @@ export function setLang(next) {
   try {
     localStorage.setItem(STORE, lang);
   } catch {
-    /* private mode 등 — 무시 */
+    /* private mode etc. — ignore */
   }
   document.documentElement.lang = lang;
   applyI18n(document);
   subs.forEach((fn) => fn(lang));
 }
 
-// 언어 변경 시 동적 컴포넌트 갱신용. 해지 함수 반환.
+// Register a callback for language changes; returns an unsubscribe function.
 export function onLangChange(fn) {
   subs.add(fn);
   return () => subs.delete(fn);
 }
 
-// 정적 텍스트 일괄 적용.
+// Apply all static translations in bulk.
 export function applyI18n(root = document) {
   root.querySelectorAll("[data-i18n]").forEach((el) => {
     el.textContent = t(el.dataset.i18n);
