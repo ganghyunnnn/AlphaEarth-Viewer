@@ -27,7 +27,7 @@ nginx serves the frontend and proxies a FastAPI + TiTiler backend that renders R
 | 🎚️ **Gray-code scrub** | Sweep 262k band combos; or type R/G/B bands or the combo index directly |
 | 🪟 **Compare mode** | Split-screen swipe — two combos/years side by side |
 | 🔍 **Search** | Place name (OSM / Nominatim) or `lat, lng` |
-| 🗺️ **Basemaps** | Satellite (default, year-aware via Esri Wayback) / Dark / OSM |
+| 🗺️ **Basemaps** | Satellite (default, year-aware via Esri Wayback) / Dark / Streets |
 | 🌫️ **Opacity & on/off** | Blend the embedding over the basemap, or hide it entirely |
 | 🌐 **EN / 한국어** · 🔗 **Permalink** | Language toggle and shareable URL state |
 

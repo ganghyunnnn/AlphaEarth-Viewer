@@ -285,12 +285,13 @@ $("searchToggle").addEventListener("click", () => {
   if (!collapsed) $("searchInput").focus();
 });
 
-// --- Basemap switch (dark/satellite/OSM) — global view setting, applied to both map A and B -------
+// --- Basemap switch (dark/satellite/streets) — global view setting, applied to both map A and B -------
 let currentBasemap = localStorage.getItem("aef_basemap") || DEFAULT_BASEMAP;
+if (currentBasemap === "osm") currentBasemap = "voyager"; // migrate former OSM basemap
 if (!BASEMAPS[currentBasemap]) currentBasemap = "dark";
 
 // satellite is year-aware (Esri Wayback): its tiles follow the active side's AEF year.
-// dark/osm are static. Basemap stays global (one shared layer for A and B).
+// dark/streets are static. Basemap stays global (one shared layer for A and B).
 function basemapTilesFor(key) {
   const bm = BASEMAPS[key];
   return bm.yearAware ? satelliteTiles(sideParams[activeSide].year) : bm.tiles;

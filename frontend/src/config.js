@@ -62,9 +62,9 @@ export const BASEMAPS = {
     attribution: "© Esri Wayback · Maxar, Earthstar Geographics",
     yearAware: true,
   },
-  osm: {
-    tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-    attribution: "© OpenStreetMap contributors",
+  voyager: {
+    tiles: ["https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"],
+    attribution: "© OpenStreetMap contributors, © CARTO",
   },
 };
 
