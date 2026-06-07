@@ -6,7 +6,7 @@ import { SearchControl } from "./search.js";
 import { readState, pushState, shareUrl } from "./state.js";
 import { TOTAL, indexToTriple, bandName } from "./graycode.js";
 import { applyI18n, setLang, getLang, onLangChange, t } from "./i18n.js";
-import { BASEMAPS, DEFAULT_BASEMAP } from "./config.js";
+import { BASEMAPS, DEFAULT_BASEMAP, satelliteTiles } from "./config.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -121,6 +121,8 @@ $("year").addEventListener("input", () => {
   updateSideBadges();
   pushState(state);
 });
+// On release, sync the year-aware (satellite) basemap once — avoids reloading it on every drag step.
+$("year").addEventListener("change", refreshYearAwareBasemap);
 
 // --- Contrast (min/max): slider + numeric keyboard input (two-way sync) -----------
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -180,6 +182,7 @@ function setActiveSide(side) {
   $("yearOut").textContent = String(p.year);
   setRangeUI(p);
   scrub.show(p.scrub);
+  refreshYearAwareBasemap(); // satellite follows the active side's year
 }
 $("tabA").addEventListener("click", () => setActiveSide("A"));
 $("tabB").addEventListener("click", () => setActiveSide("B"));
@@ -285,6 +288,22 @@ $("searchToggle").addEventListener("click", () => {
 // --- Basemap switch (dark/satellite/OSM) — global view setting, applied to both map A and B -------
 let currentBasemap = localStorage.getItem("aef_basemap") || DEFAULT_BASEMAP;
 if (!BASEMAPS[currentBasemap]) currentBasemap = "dark";
+
+// satellite is year-aware (Esri Wayback): its tiles follow the active side's AEF year.
+// dark/osm are static. Basemap stays global (one shared layer for A and B).
+function basemapTilesFor(key) {
+  const bm = BASEMAPS[key];
+  return bm.yearAware ? satelliteTiles(sideParams[activeSide].year) : bm.tiles;
+}
+// Re-apply the satellite basemap when the active year changes (no-op for static basemaps).
+function refreshYearAwareBasemap() {
+  if (!BASEMAPS[currentBasemap]?.yearAware) return;
+  const tiles = satelliteTiles(sideParams[activeSide].year);
+  const { attribution } = BASEMAPS[currentBasemap];
+  viewer.setBasemapTiles(tiles, attribution);
+  compare.setBasemapTiles(tiles, attribution);
+}
+
 function setBasemap(key) {
   if (!BASEMAPS[key]) return;
   currentBasemap = key;
@@ -293,7 +312,8 @@ function setBasemap(key) {
   } catch {
     /* private mode etc. — ignore */
   }
-  const { tiles, attribution } = BASEMAPS[key];
+  const { attribution } = BASEMAPS[key];
+  const tiles = basemapTilesFor(key);
   viewer.setBasemapTiles(tiles, attribution);
   compare.setBasemapTiles(tiles, attribution);
   document

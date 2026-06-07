@@ -24,16 +24,43 @@ export const DEFAULTS = {
 
 export const YEAR_RANGE = [2017, 2025];
 
+// Esri World Imagery Wayback: map each AEF year to the latest Wayback release in that
+// calendar year, so the satellite basemap can track the selected year.
+// Hardcoded (past releases are immutable) to avoid a runtime config fetch + CORS.
+// Source: https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/waybackconfig.json
+const WAYBACK_RELEASE = {
+  2017: 25521, 2018: 23448, 2019: 4756, 2020: 29260,
+  2021: 26120, 2022: 45134, 2023: 56102, 2024: 16453, 2025: 13192,
+};
+const WAYBACK_YEARS = Object.keys(WAYBACK_RELEASE).map(Number);
+
+function waybackRelease(year) {
+  if (WAYBACK_RELEASE[year]) return WAYBACK_RELEASE[year];
+  // out of range → nearest available year
+  const nearest = WAYBACK_YEARS.reduce((a, b) => (Math.abs(b - year) < Math.abs(a - year) ? b : a));
+  return WAYBACK_RELEASE[nearest];
+}
+
+// Satellite tiles for a given year (per-tile redirect to the deduped release is handled by the server).
+export function satelliteTiles(year) {
+  const rel = waybackRelease(year);
+  return [
+    `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/${rel}/{z}/{y}/{x}`,
+  ];
+}
+
 // Basemaps: key-free public raster tiles (for demo). Replace in production as needed.
 // Switched at runtime via setTiles on the base source (Esri uses {z}/{y}/{x} order).
+// satellite is yearAware: its tiles are resolved per selected year via satelliteTiles().
 export const BASEMAPS = {
   dark: {
     tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
     attribution: "© CARTO",
   },
   satellite: {
-    tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
-    attribution: "© Esri, Maxar, Earthstar Geographics",
+    tiles: satelliteTiles(DEFAULTS.year), // initial-frame fallback; refined per year at runtime
+    attribution: "© Esri Wayback · Maxar, Earthstar Geographics",
+    yearAware: true,
   },
   osm: {
     tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
