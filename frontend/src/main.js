@@ -4,7 +4,7 @@ import { Prefetcher } from "./prefetch.js";
 import { CompareController } from "./compare.js";
 import { SearchControl } from "./search.js";
 import { readState, pushState, shareUrl } from "./state.js";
-import { TOTAL, indexToTriple } from "./graycode.js";
+import { TOTAL, indexToTriple, bandName } from "./graycode.js";
 import { applyI18n, setLang, getLang, onLangChange, t } from "./i18n.js";
 import { BASEMAPS, DEFAULT_BASEMAP } from "./config.js";
 
@@ -35,6 +35,19 @@ const sideParams = { A: state, B };
 let activeSide = "A"; // the side currently being edited in the panel
 let bSeeded = !!state.compare; // skip cloning A to B if B values were restored from permalink
 
+// --- Per-side settings badges (on the A/B tabs) ------------------------
+// Always show each side's year / band combo / contrast so both sides can be
+// compared at a glance — without switching tabs (year/band/contrast are per-side).
+const sideInfo = { A: $("tabAInfo"), B: $("tabBInfo") };
+function sideSummary(p) {
+  const [r, g, b] = indexToTriple(p.scrub);
+  return `${p.year} · ${bandName(r)}/${bandName(g)}/${bandName(b)} · ${p.min}/${p.max}`;
+}
+function updateSideBadges() {
+  sideInfo.A.textContent = sideSummary(sideParams.A);
+  sideInfo.B.textContent = sideSummary(sideParams.B);
+}
+
 // --- Idle-prediction prefetch (based on map A) -------------------------
 const prefetcher = new Prefetcher(viewer.map);
 function pfCtx() {
@@ -63,6 +76,7 @@ function renderActive(commit) {
   clearTimeout(renderTimer);
   if (commit) doIt();
   else renderTimer = setTimeout(doIt, 150);
+  updateSideBadges();
 }
 
 // --- Scrub bar ----------------------------------------------------------
@@ -104,6 +118,7 @@ $("year").addEventListener("input", () => {
   } else {
     compare.setRenderB({ year: p.year, triple: indexToTriple(p.scrub), range: { min: p.min, max: p.max } });
   }
+  updateSideBadges();
   pushState(state);
 });
 
@@ -192,6 +207,7 @@ function setCompare(on) {
     compare.setBasemapTiles(bm.tiles, bm.attribution);
     compare.setOpacity(currentOpacity);
     compare.setVisible(aefOn);
+    updateSideBadges();
   } else {
     compare.disable();
     setActiveSide("A"); // single view → return to editing A
@@ -236,6 +252,7 @@ viewer.onIdle = () => pfSettle();
 // --- Initialization -----------------------------------------------------
 viewer.whenReady(() => {
   scrub.init(state.scrub); // resolve triple → onChange → viewer.setRender → create mosaic source
+  updateSideBadges(); // seed A/B tab summaries
   setBasemap(currentBasemap); // restore saved basemap (swap base tiles if not dark)
   setOpacity(currentOpacity, false); // apply saved opacity (after layer is created)
   setAefOn(aefOn, false); // apply saved layer on/off state

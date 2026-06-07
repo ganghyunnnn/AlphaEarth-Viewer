@@ -44,8 +44,14 @@
         <span class="title" data-i18n="panelTitle">Controls</span>
         <!-- Edit-target selector (visible in compare mode only) -->
         <div id="sideTabs" class="side-tabs" hidden>
-          <button id="tabA" class="side-tab a on" data-side="A">A</button>
-          <button id="tabB" class="side-tab b" data-side="B">B</button>
+          <button id="tabA" class="side-tab a on" data-side="A">
+            <span class="side-tab-name">A</span>
+            <span class="side-tab-info" id="tabAInfo"></span>
+          </button>
+          <button id="tabB" class="side-tab b" data-side="B">
+            <span class="side-tab-name">B</span>
+            <span class="side-tab-info" id="tabBInfo"></span>
+          </button>
         </div>
         <button id="collapse" class="collapse" data-i18n-title="collapseTitle" title="Collapse / expand panel" aria-expanded="true">▾</button>
       </div>
