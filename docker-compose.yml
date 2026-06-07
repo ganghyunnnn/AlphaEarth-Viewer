@@ -1,5 +1,6 @@
 # One-line run:  docker compose up --build
 # Browser:       http://localhost:8080
+name: alphaearth-viewer
 services:
   backend:
     build: ./backend

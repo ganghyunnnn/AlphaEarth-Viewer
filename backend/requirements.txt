@@ -1,7 +1,0 @@
-# FastAPI app + TiTiler dynamic tiles + DuckDB remote index queries
-fastapi>=0.115
-uvicorn[standard]>=0.30
-titiler.core>=0.18
-titiler.mosaic>=0.18
-duckdb>=1.1
-pydantic>=2.7
